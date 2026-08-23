@@ -20,6 +20,15 @@ Each object pair is collapsed to its single worst encounter in the window before
 
 Test: `python tests/test_risk.py` (plain assert-based, no framework) guards the pure Chan-Pc / risk-band / screening-filter logic in `risk.py` and `screening.py`.
 
+## Frontend visual identity (src/style.css, index.html)
+
+The console's type system is three Google Fonts, each with one job: `--font-display` (Martian Mono) for the wordmark, nav, and uppercase labels; `--font-data` (IBM Plex Mono) for numbers and timestamps; `--font-body` (Newsreader, a serif) for the plain-language sentences in risk rows and the detail panel.
+Keep new UI in one of these three roles rather than introducing a fourth face or falling back to a system sans.
+
+Risk is never encoded as a flat colour strip or a pill/chip.
+The ranked list and the bottom-left legend both use a log-scaled miss-distance ruler (`missRulerHTML` and `renderLegend` in `src/ui.js`) reading against `screening.reporting_threshold_km` from the live data, since that threshold can differ per run (5 km in the current engine config, 10 km in the committed sample).
+Extend that ruler rather than adding a second risk-colour convention.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.

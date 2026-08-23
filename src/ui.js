@@ -1,6 +1,29 @@
 import { fmtUtc, fmtDuration, plainLanguageLine } from './data.js';
 
-export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, onSelect) {
+// Log-scaled position (0..1) of a distance inside [floorKm, ceilKm], so a
+// 0.02 km pass and a 4 km pass both land somewhere legible instead of every
+// non-critical mark bunching up against one end of a linear scale.
+const RULER_FLOOR_KM = 0.01;
+
+function logPct(km, ceilKm) {
+  const clamped = Math.max(km, RULER_FLOOR_KM);
+  const pct = (Math.log10(clamped) - Math.log10(RULER_FLOOR_KM)) / (Math.log10(ceilKm) - Math.log10(RULER_FLOOR_KM));
+  return Math.min(1, Math.max(0, pct));
+}
+
+function missRulerHTML(missKm, thresholdKm, band) {
+  const pct = logPct(missKm, thresholdKm);
+  const top = (1 - pct) * (100 - 8) + 4; // keep the mark clear of the track ends
+  return `
+    <div class="miss-ruler" title="Miss distance ${missKm.toFixed(2)} km against the ${thresholdKm} km reporting threshold">
+      <div class="miss-ruler-track"></div>
+      <div class="miss-ruler-threshold"></div>
+      <div class="miss-ruler-mark band-${band}" style="top:${top}%"></div>
+    </div>
+  `;
+}
+
+export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, thresholdKm, onSelect) {
   countEl.textContent = conjunctions.length ? `${conjunctions.length} tracked` : '';
 
   if (conjunctions.length === 0) {
@@ -19,8 +42,13 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `risk-row band-${c.risk_band}${c.id === selectedId ? ' is-selected' : ''}`;
+    btn.className = `risk-row${c.id === selectedId ? ' is-selected' : ''}`;
     btn.setAttribute('aria-pressed', String(c.id === selectedId));
+
+    btn.innerHTML = missRulerHTML(c.miss_distance_km, thresholdKm, c.risk_band);
+
+    const content = document.createElement('div');
+    content.className = 'risk-row-content';
 
     const top = document.createElement('div');
     top.className = 'risk-row-top';
@@ -34,12 +62,12 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
       tag.textContent = 'INDIA';
       top.appendChild(tag);
     }
-    btn.appendChild(top);
+    content.appendChild(top);
 
     const line = document.createElement('p');
     line.className = 'risk-row-line';
     line.textContent = plainLanguageLine(c, currentTime) + ` Risk: ${titleCase(c.risk_band)}.`;
-    btn.appendChild(line);
+    content.appendChild(line);
 
     const stats = document.createElement('div');
     stats.className = 'risk-row-stats';
@@ -47,7 +75,9 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
       <span>Miss <b>${c.miss_distance_km.toFixed(2)} km</b></span>
       <span>Max Pc <b>${c.max_collision_probability.toExponential(1)}</b></span>
     `;
-    btn.appendChild(stats);
+    content.appendChild(stats);
+
+    btn.appendChild(content);
 
     btn.addEventListener('click', () => onSelect(c.id));
     li.appendChild(btn);
@@ -57,6 +87,36 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
 
 function titleCase(s) {
   return s.charAt(0) + s.slice(1).toLowerCase();
+}
+
+// Parses "... miss_distance_km < 0.5" out of the engine's risk_bands.rules
+// text, so the legend's boundary ticks stay true to the live thresholds
+// instead of duplicating magic numbers the frontend doesn't own.
+function parseDistanceBoundary(ruleText) {
+  const m = ruleText.match(/miss_distance_km < ([\d.]+)/);
+  return m ? Number(m[1]) : null;
+}
+
+export function renderLegend(barEl, ticksEl, thresholdEl, riskBands, thresholdKm) {
+  const boundaries = ['CRITICAL', 'HIGH', 'MODERATE']
+    .map((band) => parseDistanceBoundary(riskBands.rules[band]))
+    .filter((v) => v !== null);
+
+  const stops = [0, ...boundaries, thresholdKm];
+  const colors = ['critical', 'high', 'moderate', 'low'];
+  const gradientParts = [];
+  for (let i = 0; i < colors.length; i++) {
+    const from = logPct(Math.max(stops[i], RULER_FLOOR_KM), thresholdKm) * 100;
+    const to = logPct(stops[i + 1], thresholdKm) * 100;
+    gradientParts.push(`var(--${colors[i]}) ${from}%`, `var(--${colors[i]}) ${to}%`);
+  }
+  barEl.style.background = `linear-gradient(to right, ${gradientParts.join(', ')})`;
+
+  ticksEl.innerHTML = boundaries
+    .map((km) => `<span class="legend-ruler-tick" style="left:${logPct(km, thresholdKm) * 100}%"></span>`)
+    .join('');
+
+  thresholdEl.textContent = `≤ ${thresholdKm} km reported`;
 }
 
 export function renderDetail(bodyEl, c, riskBands) {
@@ -70,7 +130,7 @@ export function renderDetail(bodyEl, c, riskBands) {
   const bandRow = document.createElement('div');
   bandRow.className = 'detail-band-row';
   bandRow.innerHTML = `<span class="risk-band-tag band-${c.risk_band}">${c.risk_band}</span>
-    <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint)">TCA ${fmtUtc(c.tca_utc)}</span>`;
+    <span class="detail-tca">TCA ${fmtUtc(c.tca_utc)}</span>`;
   bodyEl.appendChild(bandRow);
 
   const objects = document.createElement('div');
@@ -115,6 +175,12 @@ function metric(label, value, warn) {
   </div>`;
 }
 
+// A tick's height carries risk band, since a flat wall of same-height marks
+// is what made the bar unreadable at 543 conjunctions: critical passes now
+// read as tall spikes above a low hum of routine ones, like a strip-chart.
+const TICK_HEIGHT_PX = { CRITICAL: 12, HIGH: 9, MODERATE: 5, LOW: 3 };
+const TICK_OPACITY = { CRITICAL: 0.95, HIGH: 0.85, MODERATE: 0.55, LOW: 0.4 };
+
 export function renderTicks(ticksEl, conjunctions, startMs, endMs, onJump) {
   ticksEl.innerHTML = '';
   const span = endMs - startMs;
@@ -126,6 +192,8 @@ export function renderTicks(ticksEl, conjunctions, startMs, endMs, onJump) {
     btn.type = 'button';
     btn.className = 'scrub-tick';
     btn.style.left = `${pct}%`;
+    btn.style.height = `${TICK_HEIGHT_PX[c.risk_band] ?? 3}px`;
+    btn.style.setProperty('--tick-opacity', String(TICK_OPACITY[c.risk_band] ?? 0.4));
     btn.style.background = `var(--${c.risk_band.toLowerCase()})`;
     btn.setAttribute(
       'aria-label',
