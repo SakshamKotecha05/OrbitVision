@@ -173,13 +173,14 @@ def run(offline=False, out_path=None, window_hours=WINDOW_HOURS,
     # there are tens of thousands of these and only the ranked survivors
     # need the expensive per-object detail built for them.
     scored = []
+    screen_counts = {"formation_flying": 0}
     t0 = time.monotonic()
     for n, (i, j, t_sec, _d_pred) in enumerate(encounters):
         if assemblies[i] > 0 and assemblies[i] == assemblies[j]:
             continue
         hit = _refine_and_score(objects[i], objects[j], satrecs[i], satrecs[j],
                                 window_start + timedelta(seconds=t_sec),
-                                reporting_threshold_km)
+                                reporting_threshold_km, screen_counts=screen_counts)
         if hit is not None:
             scored.append(hit)
         if (n + 1) % 25000 == 0:
@@ -270,6 +271,8 @@ def run(offline=False, out_path=None, window_hours=WINDOW_HOURS,
                 "it and before the general_list_cap."
             ),
             "general_list_cap": GENERAL_LIST_CAP,
+            "formation_flying_screen": risk.formation_flying_screen_block(
+                screen_counts["formation_flying"]),
             "conjunctions_reported": len(conjunctions),
             "runtime_seconds": round(runtime_seconds, 3),
             "excluded_pairs": {
@@ -317,7 +320,8 @@ def run(offline=False, out_path=None, window_hours=WINDOW_HOURS,
     return doc
 
 
-def _refine_and_score(obj_a, obj_b, sat_a, sat_b, coarse_time, reporting_threshold_km):
+def _refine_and_score(obj_a, obj_b, sat_a, sat_b, coarse_time, reporting_threshold_km,
+                      screen_counts=None):
     """Refine to true TCA and score. Deliberately light: no orbit tracks, no
     output blocks, since only the ranked survivors need that expensive
     per-object detail (see _build_conjunction)."""
@@ -326,6 +330,10 @@ def _refine_and_score(obj_a, obj_b, sat_a, sat_b, coarse_time, reporting_thresho
 
     refined = screening.refine_pair(sat_p, sat_s, coarse_time)
     if refined is None or refined["miss_distance_km"] >= reporting_threshold_km:
+        return None
+    if risk.is_formation_flying(refined["relative_velocity_km_s"]):
+        if screen_counts is not None:
+            screen_counts["formation_flying"] += 1
         return None
 
     tca_dt = coarse_time + timedelta(seconds=refined["tca_offset_seconds"])
@@ -349,7 +357,7 @@ def _refine_and_score(obj_a, obj_b, sat_a, sat_b, coarse_time, reporting_thresho
         "combined_hard_body_radius_m": round(hbr_m, 3),
         "combined_position_sigma_km": round(combined_sigma_km, 3),
         "data_age_hours": round(max(primary_age_h, secondary_age_h), 3),
-        "risk_band": risk.risk_band(max_pc, miss_km),
+        "risk_band": risk.risk_band(max_pc),
         "india_related": primary.owner_country == "IND" or secondary.owner_country == "IND",
         "_primary_obj": primary,
         "_secondary_obj": secondary,

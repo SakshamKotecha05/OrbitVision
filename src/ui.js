@@ -89,34 +89,46 @@ function titleCase(s) {
   return s.charAt(0) + s.slice(1).toLowerCase();
 }
 
-// Parses "... miss_distance_km < 0.5" out of the engine's risk_bands.rules
-// text, so the legend's boundary ticks stay true to the live thresholds
-// instead of duplicating magic numbers the frontend doesn't own.
-function parseDistanceBoundary(ruleText) {
-  const m = ruleText.match(/miss_distance_km < ([\d.]+)/);
+// Parses "... max_collision_probability >= 1e-4" out of the engine's
+// risk_bands.rules text, so the legend's boundary ticks stay true to the
+// live thresholds instead of duplicating magic numbers the frontend
+// doesn't own. Risk band is driven by max Pc alone (see risk.py), not
+// miss distance, so the legend reads as a probability axis.
+function parsePcBoundary(ruleText) {
+  const m = ruleText.match(/max_collision_probability >= ([\d.eE+-]+)/);
   return m ? Number(m[1]) : null;
 }
 
-export function renderLegend(barEl, ticksEl, thresholdEl, riskBands, thresholdKm) {
-  const boundaries = ['CRITICAL', 'HIGH', 'MODERATE']
-    .map((band) => parseDistanceBoundary(riskBands.rules[band]))
+// Axis bounds for the legend's log scale: the true range of a probability.
+const PC_AXIS_FLOOR = 1e-9;
+const PC_AXIS_CEIL = 1;
+
+function pcLogPct(pc) {
+  const clamped = Math.min(Math.max(pc, PC_AXIS_FLOOR), PC_AXIS_CEIL);
+  return (Math.log10(clamped) - Math.log10(PC_AXIS_FLOOR)) / (Math.log10(PC_AXIS_CEIL) - Math.log10(PC_AXIS_FLOOR));
+}
+
+export function renderLegend(barEl, ticksEl, thresholdEl, riskBands) {
+  const boundaries = ['MODERATE', 'HIGH', 'CRITICAL']
+    .map((band) => parsePcBoundary(riskBands.rules[band]))
     .filter((v) => v !== null);
 
-  const stops = [0, ...boundaries, thresholdKm];
-  const colors = ['critical', 'high', 'moderate', 'low'];
+  const stops = [PC_AXIS_FLOOR, ...boundaries, PC_AXIS_CEIL];
+  const colors = ['low', 'moderate', 'high', 'critical'];
   const gradientParts = [];
   for (let i = 0; i < colors.length; i++) {
-    const from = logPct(Math.max(stops[i], RULER_FLOOR_KM), thresholdKm) * 100;
-    const to = logPct(stops[i + 1], thresholdKm) * 100;
+    const from = pcLogPct(stops[i]) * 100;
+    const to = pcLogPct(stops[i + 1]) * 100;
     gradientParts.push(`var(--${colors[i]}) ${from}%`, `var(--${colors[i]}) ${to}%`);
   }
   barEl.style.background = `linear-gradient(to right, ${gradientParts.join(', ')})`;
 
   ticksEl.innerHTML = boundaries
-    .map((km) => `<span class="legend-ruler-tick" style="left:${logPct(km, thresholdKm) * 100}%"></span>`)
+    .map((pc) => `<span class="legend-ruler-tick" style="left:${pcLogPct(pc) * 100}%"></span>`)
     .join('');
 
-  thresholdEl.textContent = `≤ ${thresholdKm} km reported`;
+  const critical = boundaries[boundaries.length - 1];
+  thresholdEl.textContent = critical ? `≥ ${critical.toExponential(0)} critical` : '';
 }
 
 export function renderDetail(bodyEl, c, riskBands) {

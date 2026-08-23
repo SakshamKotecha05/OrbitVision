@@ -31,11 +31,29 @@ def test_max_pc_is_never_below_nominal():
 
 
 def test_risk_band_thresholds_match_contract():
-    assert risk.risk_band(max_pc=1e-3, miss_distance_km=10.0) == "CRITICAL"
-    assert risk.risk_band(max_pc=0.0, miss_distance_km=0.4) == "CRITICAL"
-    assert risk.risk_band(max_pc=5e-5, miss_distance_km=10.0) == "HIGH"
-    assert risk.risk_band(max_pc=5e-6, miss_distance_km=10.0) == "MODERATE"
-    assert risk.risk_band(max_pc=0.0, miss_distance_km=10.0) == "LOW"
+    # Pure max-Pc thresholds: a tiny miss distance must NOT promote a band on
+    # its own, since combined_position_sigma_km dwarfs any distance cutoff.
+    assert risk.risk_band(max_pc=1e-3) == "CRITICAL"
+    assert risk.risk_band(max_pc=1e-4) == "CRITICAL"
+    assert risk.risk_band(max_pc=9.99e-5) == "HIGH"
+    assert risk.risk_band(max_pc=1e-5) == "HIGH"
+    assert risk.risk_band(max_pc=9.99e-6) == "MODERATE"
+    assert risk.risk_band(max_pc=1e-6) == "MODERATE"
+    assert risk.risk_band(max_pc=9.99e-7) == "LOW"
+    assert risk.risk_band(max_pc=0.0) == "LOW"
+
+
+def test_formation_flying_pairs_are_screened_out():
+    # Co-launched/station-keeping pairs (COSMOS 2581/2582, TIANHUI 2-02A/B)
+    # sit at essentially zero relative velocity; Chan's method needs
+    # relative motion to define the encounter plane, so these must not be
+    # scored as conjunctions at all.
+    assert risk.is_formation_flying(0.0)
+    assert risk.is_formation_flying(0.00001)
+    assert risk.is_formation_flying(0.04999)
+    # A genuine LEO crossing conjunction is far faster than the floor.
+    assert not risk.is_formation_flying(risk.MIN_RELATIVE_VELOCITY_KM_S)
+    assert not risk.is_formation_flying(7.5)
 
 
 def test_perigee_apogee_filter_rejects_disjoint_orbits():
