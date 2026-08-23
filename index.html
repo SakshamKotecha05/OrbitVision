@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OrbitVision - Conjunction Risk Console</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">ORBITVISION</span>
+          <span class="brand-sub">conjunction risk console</span>
+        </div>
+
+        <nav class="mode-switch" role="tablist" aria-label="View mode">
+          <button
+            type="button"
+            id="mode-global"
+            class="mode-btn is-active"
+            role="tab"
+            aria-selected="true"
+          >
+            Global Screen
+          </button>
+          <button type="button" id="mode-india" class="mode-btn" role="tab" aria-selected="false">
+            India Watch
+          </button>
+        </nav>
+
+        <div class="topbar-meta">
+          <div class="meta-item">
+            <span class="meta-label">Window</span>
+            <span class="meta-value" id="meta-window">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Screened</span>
+            <span class="meta-value" id="meta-screened">-</span>
+          </div>
+          <button type="button" id="uncertainty-toggle" class="uncertainty-btn" aria-expanded="false">
+            <span aria-hidden="true">i</span>
+            <span class="sr-only">Uncertainty model notice</span>
+          </button>
+        </div>
+      </header>
+
+      <div
+        id="uncertainty-note"
+        class="uncertainty-note"
+        role="note"
+        hidden
+      ></div>
+
+      <main class="globe-wrap">
+        <div id="cesiumContainer"></div>
+
+        <div class="legend" aria-hidden="false">
+          <span class="legend-title">Risk band</span>
+          <span class="legend-chip band-critical">Critical</span>
+          <span class="legend-chip band-high">High</span>
+          <span class="legend-chip band-moderate">Moderate</span>
+          <span class="legend-chip band-low">Low</span>
+        </div>
+
+        <div class="india-banner" id="india-banner" hidden>
+          <div class="india-banner-title">India Watch</div>
+          <div class="india-banner-copy" id="india-banner-copy"></div>
+        </div>
+      </main>
+
+      <aside class="panel" aria-label="Conjunction risk list and detail">
+        <div class="panel-list" id="panel-list">
+          <div class="panel-list-head">
+            <h2 id="panel-heading">Ranked risks</h2>
+            <span class="panel-count" id="panel-count"></span>
+          </div>
+          <ol class="risk-rows" id="risk-rows" tabindex="-1"></ol>
+        </div>
+
+        <div class="panel-detail" id="panel-detail" hidden>
+          <button type="button" class="back-btn" id="detail-back">&larr; Back to risk list</button>
+          <div id="detail-body"></div>
+        </div>
+      </aside>
+
+      <footer class="scrub-bar">
+        <button type="button" id="play-toggle" class="play-btn" aria-label="Play time scrub">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" id="play-icon">
+            <path d="M8 5v14l11-7z" fill="currentColor" />
+          </svg>
+        </button>
+
+        <div class="scrub-time">
+          <span id="scrub-clock">-</span>
+          <span class="scrub-rel" id="scrub-rel"></span>
+        </div>
+
+        <div class="scrub-track-wrap">
+          <input
+            type="range"
+            id="scrub-slider"
+            class="scrub-slider"
+            min="0"
+            max="1000"
+            value="0"
+            step="1"
+            aria-label="Scrub prediction window"
+          />
+          <div class="scrub-ticks" id="scrub-ticks" aria-hidden="true"></div>
+        </div>
+
+        <div class="scrub-bounds">
+          <span id="scrub-start">-</span>
+          <span id="scrub-end">-</span>
+        </div>
+
+        <div class="scrub-speed">
+          <label for="speed-select" class="sr-only">Playback speed</label>
+          <select id="speed-select">
+            <option value="60">1 min/s</option>
+            <option value="300" selected>5 min/s</option>
+            <option value="900">15 min/s</option>
+            <option value="3600">1 hr/s</option>
+          </select>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
