@@ -7,6 +7,5 @@ venv/
 node_modules/
 dist/
 cache/
-data/celestrak/
 data/output.json
 .impeccable/
