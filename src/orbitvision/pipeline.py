@@ -191,11 +191,31 @@ def run(offline=False, out_path=None, window_hours=WINDOW_HOURS,
     print(f"[pipeline] pass 3: {conjunctions_found} conjunctions within "
           f"{reporting_threshold_km} km in {time.monotonic() - t0:.0f}s")
 
+    # Collapse each object pair to its single worst encounter across the
+    # whole window, worst meaning the same criterion used to rank the final
+    # list: worst risk band, then highest max_collision_probability, then
+    # lowest miss_distance_km. Formation-flying and co-orbiting pairs (see
+    # COSMOS 2581/2582, TIANHUI 2-02A/B) stay close on every revolution and
+    # would otherwise repeat dozens of times, pushing genuinely distinct
+    # risks out from under the general list cap. scored is already sorted
+    # worst-first, so keeping the first occurrence per pair keeps the worst.
+    seen_pairs = set()
+    collapsed = []
+    for s in scored:
+        pair_key = (s["_primary_obj"].norad_id, s["_secondary_obj"].norad_id)
+        if pair_key in seen_pairs:
+            continue
+        seen_pairs.add(pair_key)
+        collapsed.append(s)
+    distinct_pairs_found = len(collapsed)
+    print(f"[pipeline] pair collapse: {conjunctions_found} conjunctions over "
+          f"{distinct_pairs_found} distinct pairs")
+
     # Rank, then keep the top of the general list plus every India-related
     # conjunction, whatever its rank.
-    selected = scored[:GENERAL_LIST_CAP]
+    selected = collapsed[:GENERAL_LIST_CAP]
     selected_ids = {id(s) for s in selected}
-    selected += [s for s in scored[GENERAL_LIST_CAP:]
+    selected += [s for s in collapsed[GENERAL_LIST_CAP:]
                  if s["india_related"] and id(s) not in selected_ids]
     selected.sort(key=_sort_key)
 
@@ -236,6 +256,19 @@ def run(offline=False, out_path=None, window_hours=WINDOW_HOURS,
             "pairs_after_perigee_apogee_filter": pairs_after_p1,
             "pairs_after_coarse_sweep": len(encounters),
             "conjunctions_found": conjunctions_found,
+            "distinct_pairs_found": distinct_pairs_found,
+            "pair_collapse_note": (
+                "Each object pair is collapsed to its single worst encounter "
+                "across the whole window before ranking and capping, worst "
+                "meaning the same criterion used to rank the final list: "
+                "worst risk band, then highest max_collision_probability, "
+                "then lowest miss_distance_km. Formation-flying and "
+                "co-orbiting pairs stay close on every revolution and would "
+                "otherwise repeat dozens of times and crowd out genuinely "
+                "distinct risks under the cap. conjunctions_found is the "
+                "count before this collapse; distinct_pairs_found is after "
+                "it and before the general_list_cap."
+            ),
             "general_list_cap": GENERAL_LIST_CAP,
             "conjunctions_reported": len(conjunctions),
             "runtime_seconds": round(runtime_seconds, 3),
