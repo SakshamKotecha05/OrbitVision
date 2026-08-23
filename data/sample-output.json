@@ -1,0 +1,1983 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at_utc": "2026-08-23T06:00:00.000Z",
+  "generator": "orbitvision-pipeline 0.1.0",
+  "source": {
+    "provider": "CelesTrak",
+    "gp_endpoint": "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json",
+    "satcat_endpoint": "https://celestrak.org/pub/satcat.csv",
+    "gp_retrieved_utc": "2026-08-23T04:12:08.000Z",
+    "satcat_retrieved_utc": "2026-08-23T04:12:19.000Z",
+    "mode": "offline",
+    "note": "This file is a hand-authored sample. The conjunction records are fabricated and match the pinned contract shape exactly."
+  },
+  "screening": {
+    "window_start_utc": "2026-08-23T06:00:00.000Z",
+    "window_end_utc": "2026-08-26T06:00:00.000Z",
+    "window_hours": 72.0,
+    "regime": "LEO",
+    "leo_apogee_limit_km": 2000.0,
+    "frame": "TEME",
+    "frame_note": "Screening distances are computed in TEME and are frame-invariant. Every Earth-relative coordinate emitted in this file is converted to ECEF and labelled as such.",
+    "perigee_apogee_pad_km": 500.0,
+    "coarse_step_seconds": 60.0,
+    "coarse_gate_km": 500.0,
+    "coarse_gate_rationale": "gate >= max_relative_velocity * step / 2, with max_relative_velocity taken as 15 km/s in LEO. A 50 km gate at a 60 s step aliases past real conjunctions.",
+    "refine_step_seconds": 1.0,
+    "reporting_threshold_km": 10.0,
+    "objects_screened": 4,
+    "pairs_total": 6,
+    "pairs_after_perigee_apogee_filter": 5,
+    "pairs_after_coarse_sweep": 4,
+    "conjunctions_reported": 4,
+    "runtime_seconds": 0.0
+  },
+  "uncertainty_model": {
+    "is_measured_covariance": false,
+    "kind": "synthesised_from_element_set_age",
+    "summary": "GP/TLE element sets carry no covariance. Position uncertainty here is MODELLED from element-set age using published SGP4 error growth, not measured.",
+    "sigma_at_epoch_km": 1.0,
+    "sigma_growth_km_per_day": 2.0,
+    "sigma_growth_range_km_per_day": [
+      1.0,
+      3.0
+    ],
+    "pc_method": "Chan (1997) analytic series, on the Foster (1992) formulation",
+    "max_pc_method": "Nominal Pc maximised over an isotropic scaling of the combined covariance (NASA CARA maximum-Pc treatment), reported because Pc is not monotonic in uncertainty.",
+    "hard_body_radius_m_by_rcs_size": {
+      "SMALL": 0.25,
+      "MEDIUM": 1.0,
+      "LARGE": 3.0,
+      "UNKNOWN": 1.0
+    },
+    "hard_body_radius_note": "RCS_SIZE is a radar cross-section class, a proxy for physical size and not physical size itself."
+  },
+  "risk_bands": {
+    "order": [
+      "CRITICAL",
+      "HIGH",
+      "MODERATE",
+      "LOW"
+    ],
+    "basis": "Banding uses maximum Pc and miss distance together, never nominal Pc alone, because probability dilution makes stale data score a deceptively low nominal Pc.",
+    "rules": {
+      "CRITICAL": "max_collision_probability >= 1e-4 or miss_distance_km < 0.5",
+      "HIGH": "max_collision_probability >= 1e-5 or miss_distance_km < 1.0",
+      "MODERATE": "max_collision_probability >= 1e-6 or miss_distance_km < 5.0",
+      "LOW": "everything else inside the reporting threshold"
+    }
+  },
+  "conjunctions": [
+    {
+      "id": "43111-34456-20260824T031522Z",
+      "tca_utc": "2026-08-24T03:15:22.418Z",
+      "miss_distance_km": 0.412,
+      "relative_velocity_km_s": 13.874,
+      "collision_probability": 2.94e-05,
+      "max_collision_probability": 0.000331,
+      "combined_hard_body_radius_m": 1.25,
+      "combined_position_sigma_km": 2.71,
+      "data_age_hours": 24.8,
+      "risk_band": "CRITICAL",
+      "india_related": true,
+      "primary": {
+        "norad_id": 43111,
+        "name": "CARTOSAT-2F",
+        "owner_country": "IND",
+        "object_type": "PAYLOAD",
+        "rcs_size": "MEDIUM",
+        "launch_date": "2018-01-12",
+        "epoch_utc": "2026-08-22T18:41:03.000Z",
+        "data_age_hours": 11.3,
+        "orbit": {
+          "epoch_utc": "2026-08-22T18:41:03.000Z",
+          "semi_major_axis_km": 6883.337,
+          "eccentricity": 0.0012,
+          "inclination_deg": 97.46,
+          "ra_of_asc_node_deg": 214.83,
+          "arg_of_pericenter_deg": 88.21,
+          "mean_anomaly_deg": 271.94,
+          "mean_motion_rev_per_day": 15.2027027,
+          "bstar": 0.00012843,
+          "period_minutes": 94.72,
+          "perigee_altitude_km": 496.94,
+          "apogee_altitude_km": 513.46
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            -1893.442,
+            5104.771,
+            4092.118
+          ],
+          "velocity_km_s": [
+            -4.113,
+            -4.902,
+            4.219
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-22T18:41:03.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              -4540.45,
+              -2430.714,
+              4566.866
+            ],
+            [
+              -4050.635,
+              -1989.282,
+              5197.638
+            ],
+            [
+              -3489.635,
+              -1512.891,
+              5737.067
+            ],
+            [
+              -2867.309,
+              -1009.913,
+              6175.674
+            ],
+            [
+              -2194.593,
+              -489.187,
+              6505.75
+            ],
+            [
+              -1483.309,
+              40.136,
+              6721.496
+            ],
+            [
+              -745.959,
+              568.754,
+              6819.12
+            ],
+            [
+              4.501,
+              1087.377,
+              6796.905
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -4880.066,
+              1645.908,
+              4566.866
+            ],
+            [
+              -4208.891,
+              1627.921,
+              5197.638
+            ],
+            [
+              -3464.742,
+              1569.063,
+              5737.067
+            ],
+            [
+              -2661.355,
+              1469.208,
+              6175.674
+            ],
+            [
+              -1813.499,
+              1329.195,
+              6505.75
+            ],
+            [
+              -936.697,
+              1150.833,
+              6721.496
+            ],
+            [
+              -46.938,
+              936.874,
+              6819.12
+            ],
+            [
+              839.618,
+              690.977,
+              6796.905
+            ]
+          ]
+        }
+      },
+      "secondary": {
+        "norad_id": 34456,
+        "name": "COSMOS 2251 DEB",
+        "owner_country": "CIS",
+        "object_type": "DEBRIS",
+        "rcs_size": "SMALL",
+        "launch_date": "1993-06-16",
+        "epoch_utc": "2026-08-22T05:12:47.000Z",
+        "data_age_hours": 24.8,
+        "orbit": {
+          "epoch_utc": "2026-08-22T05:12:47.000Z",
+          "semi_major_axis_km": 6890.037,
+          "eccentricity": 0.0138,
+          "inclination_deg": 74.02,
+          "ra_of_asc_node_deg": 41.55,
+          "arg_of_pericenter_deg": 132.6,
+          "mean_anomaly_deg": 228.71,
+          "mean_motion_rev_per_day": 15.18026565,
+          "bstar": 0.0004811,
+          "period_minutes": 94.86,
+          "perigee_altitude_km": 416.817,
+          "apogee_altitude_km": 606.983
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            -1893.902,
+            5104.318,
+            4092.694
+          ],
+          "velocity_km_s": [
+            1.664,
+            -5.061,
+            5.437
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-22T05:12:47.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              -3531.615,
+              -892.085,
+              5848.46
+            ],
+            [
+              -4024.003,
+              -1505.256,
+              5386.484
+            ],
+            [
+              -4445.88,
+              -2092.051,
+              4830.122
+            ],
+            [
+              -4789.854,
+              -2642.188,
+              4189.124
+            ],
+            [
+              -5049.896,
+              -3146.026,
+              3474.72
+            ],
+            [
+              -5221.451,
+              -3594.738,
+              2699.431
+            ],
+            [
+              -5301.511,
+              -3980.46,
+              1876.84
+            ],
+            [
+              -5288.676,
+              -4296.434,
+              1021.361
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -3067.859,
+              1963.762,
+              5848.46
+            ],
+            [
+              -3835.105,
+              1936.586,
+              5386.484
+            ],
+            [
+              -4536.1,
+              1888.472,
+              4830.122
+            ],
+            [
+              -5158.984,
+              1818.994,
+              4189.124
+            ],
+            [
+              -5693.265,
+              1727.907,
+              3474.72
+            ],
+            [
+              -6130.001,
+              1615.171,
+              2699.431
+            ],
+            [
+              -6461.948,
+              1480.982,
+              1876.84
+            ],
+            [
+              -6683.688,
+              1325.799,
+              1021.361
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "100427-58611-20260825T114004Z",
+      "tca_utc": "2026-08-25T11:40:04.902Z",
+      "miss_distance_km": 0.688,
+      "relative_velocity_km_s": 14.612,
+      "collision_probability": 8.1e-06,
+      "max_collision_probability": 0.000142,
+      "combined_hard_body_radius_m": 3.25,
+      "combined_position_sigma_km": 5.36,
+      "data_age_hours": 51.0,
+      "risk_band": "CRITICAL",
+      "india_related": false,
+      "primary": {
+        "norad_id": 100427,
+        "name": "STARLINK-32118",
+        "owner_country": "US",
+        "object_type": "PAYLOAD",
+        "rcs_size": "LARGE",
+        "launch_date": "2026-03-04",
+        "epoch_utc": "2026-08-23T03:02:11.000Z",
+        "data_age_hours": 3.1,
+        "orbit": {
+          "epoch_utc": "2026-08-23T03:02:11.000Z",
+          "semi_major_axis_km": 6920.137,
+          "eccentricity": 0.0002,
+          "inclination_deg": 53.05,
+          "ra_of_asc_node_deg": 12.77,
+          "arg_of_pericenter_deg": 96.31,
+          "mean_anomaly_deg": 263.88,
+          "mean_motion_rev_per_day": 15.0816925,
+          "bstar": 0.000215,
+          "period_minutes": 95.48,
+          "perigee_altitude_km": 540.616,
+          "apogee_altitude_km": 543.384
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            2984.117,
+            5901.443,
+            -2016.302
+          ],
+          "velocity_km_s": [
+            -6.204,
+            3.918,
+            2.281
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-23T03:02:11.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              5385.04,
+              3353.146,
+              2765.15
+            ],
+            [
+              4791.153,
+              3684.839,
+              3369.734
+            ],
+            [
+              4114.401,
+              3952.802,
+              3916.038
+            ],
+            [
+              3366.49,
+              4152.4,
+              4394.613
+            ],
+            [
+              2560.353,
+              4280.18,
+              4797.181
+            ],
+            [
+              1709.935,
+              4333.933,
+              5116.78
+            ],
+            [
+              829.943,
+              4312.73,
+              5347.883
+            ],
+            [
+              -64.404,
+              4216.936,
+              5486.492
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -4302.808,
+              4661.339,
+              2765.15
+            ],
+            [
+              -4482.03,
+              4055.193,
+              3369.734
+            ],
+            [
+              -4595.271,
+              3381.779,
+              3916.038
+            ],
+            [
+              -4641.667,
+              2651.529,
+              4394.613
+            ],
+            [
+              -4621.314,
+              1875.849,
+              4797.181
+            ],
+            [
+              -4535.251,
+              1066.937,
+              5116.78
+            ],
+            [
+              -4385.43,
+              237.588,
+              5347.883
+            ],
+            [
+              -4174.672,
+              -599.007,
+              5486.492
+            ]
+          ]
+        }
+      },
+      "secondary": {
+        "norad_id": 58611,
+        "name": "CZ-6A DEB",
+        "owner_country": "PRC",
+        "object_type": "DEBRIS",
+        "rcs_size": "SMALL",
+        "launch_date": "2024-08-06",
+        "epoch_utc": "2026-08-20T23:14:36.000Z",
+        "data_age_hours": 51.0,
+        "orbit": {
+          "epoch_utc": "2026-08-20T23:14:36.000Z",
+          "semi_major_axis_km": 7171.637,
+          "eccentricity": 0.0304,
+          "inclination_deg": 50.31,
+          "ra_of_asc_node_deg": 271.09,
+          "arg_of_pericenter_deg": 45.18,
+          "mean_anomaly_deg": 300.77,
+          "mean_motion_rev_per_day": 14.29422275,
+          "bstar": 0.0009541,
+          "period_minutes": 100.74,
+          "perigee_altitude_km": 575.482,
+          "apogee_altitude_km": 1011.518
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            2983.905,
+            5901.882,
+            -2015.744
+          ],
+          "velocity_km_s": [
+            1.833,
+            -5.116,
+            -5.008
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-20T23:14:36.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              1811.618,
+              6535.355,
+              2332.284
+            ],
+            [
+              1273.995,
+              6851.784,
+              1691.854
+            ],
+            [
+              716.572,
+              7061.728,
+              1025.131
+            ],
+            [
+              148.014,
+              7161.926,
+              342.476
+            ],
+            [
+              -422.845,
+              7150.819,
+              -345.502
+            ],
+            [
+              -987.133,
+              7028.58,
+              -1028.11
+            ],
+            [
+              -1536.079,
+              6797.109,
+              -1694.74
+            ],
+            [
+              -2061.154,
+              6460.004,
+              -2335.032
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -6759.06,
+              554.926,
+              2332.284
+            ],
+            [
+              -6969.16,
+              28.517,
+              1691.854
+            ],
+            [
+              -7080.674,
+              -495.519,
+              1025.131
+            ],
+            [
+              -7091.779,
+              -1010.818,
+              342.476
+            ],
+            [
+              -7002.097,
+              -1511.172,
+              -345.502
+            ],
+            [
+              -6812.7,
+              -1990.599,
+              -1028.11
+            ],
+            [
+              -6526.102,
+              -2443.405,
+              -1694.74
+            ],
+            [
+              -6146.222,
+              -2864.256,
+              -2335.032
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "44233-31215-20260823T192810Z",
+      "tca_utc": "2026-08-23T19:28:10.663Z",
+      "miss_distance_km": 1.905,
+      "relative_velocity_km_s": 11.204,
+      "collision_probability": 3.77e-06,
+      "max_collision_probability": 4.18e-05,
+      "combined_hard_body_radius_m": 1.25,
+      "combined_position_sigma_km": 4.29,
+      "data_age_hours": 39.2,
+      "risk_band": "HIGH",
+      "india_related": true,
+      "primary": {
+        "norad_id": 44233,
+        "name": "RISAT-2B",
+        "owner_country": "IND",
+        "object_type": "PAYLOAD",
+        "rcs_size": "MEDIUM",
+        "launch_date": "2019-05-22",
+        "epoch_utc": "2026-08-23T01:07:19.000Z",
+        "data_age_hours": 5.0,
+        "orbit": {
+          "epoch_utc": "2026-08-23T01:07:19.000Z",
+          "semi_major_axis_km": 6933.837,
+          "eccentricity": 0.0009,
+          "inclination_deg": 36.99,
+          "ra_of_asc_node_deg": 305.12,
+          "arg_of_pericenter_deg": 74.66,
+          "mean_anomaly_deg": 285.4,
+          "mean_motion_rev_per_day": 15.03602381,
+          "bstar": 9.902e-05,
+          "period_minutes": 95.77,
+          "perigee_altitude_km": 549.46,
+          "apogee_altitude_km": 561.94
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            4471.108,
+            -4790.226,
+            1281.552
+          ],
+          "velocity_km_s": [
+            4.402,
+            3.041,
+            -3.982
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-23T01:07:19.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              5025.522,
+              -4653.635,
+              1079.773
+            ],
+            [
+              5419.759,
+              -4018.895,
+              1597.747
+            ],
+            [
+              5720.812,
+              -3315.057,
+              2088.252
+            ],
+            [
+              5923.507,
+              -2554.224,
+              2542.853
+            ],
+            [
+              6024.358,
+              -1749.475,
+              2953.734
+            ],
+            [
+              6021.631,
+              -914.646,
+              3313.831
+            ],
+            [
+              5915.373,
+              -64.093,
+              3616.953
+            ],
+            [
+              5707.411,
+              787.563,
+              3857.887
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -6176.858,
+              -2959.495,
+              1079.773
+            ],
+            [
+              -5762.75,
+              -3509.418,
+              1597.747
+            ],
+            [
+              -5259.168,
+              -4007.3,
+              2088.252
+            ],
+            [
+              -4673.76,
+              -4446.117,
+              2542.853
+            ],
+            [
+              -4015.46,
+              -4819.713,
+              2953.734
+            ],
+            [
+              -3294.348,
+              -5122.879,
+              3313.831
+            ],
+            [
+              -2521.499,
+              -5351.429,
+              3616.953
+            ],
+            [
+              -1708.809,
+              -5502.252,
+              3857.887
+            ]
+          ]
+        }
+      },
+      "secondary": {
+        "norad_id": 31215,
+        "name": "FENGYUN 1C DEB",
+        "owner_country": "PRC",
+        "object_type": "DEBRIS",
+        "rcs_size": "SMALL",
+        "launch_date": "1999-05-10",
+        "epoch_utc": "2026-08-21T14:55:02.000Z",
+        "data_age_hours": 39.2,
+        "orbit": {
+          "epoch_utc": "2026-08-21T14:55:02.000Z",
+          "semi_major_axis_km": 6979.537,
+          "eccentricity": 0.0221,
+          "inclination_deg": 98.71,
+          "ra_of_asc_node_deg": 122.4,
+          "arg_of_pericenter_deg": 210.83,
+          "mean_anomaly_deg": 149.62,
+          "mean_motion_rev_per_day": 14.88833747,
+          "bstar": 0.0007124,
+          "period_minutes": 96.72,
+          "perigee_altitude_km": 447.152,
+          "apogee_altitude_km": 755.648
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            4470.902,
+            -4790.518,
+            1281.905
+          ],
+          "velocity_km_s": [
+            -2.116,
+            1.008,
+            7.298
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-21T14:55:02.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              2883.112,
+              -5469.104,
+              -3238.906
+            ],
+            [
+              2529.237,
+              -5129.337,
+              -4000.849
+            ],
+            [
+              2132.725,
+              -4703.1,
+              -4695.346
+            ],
+            [
+              1700.259,
+              -4197.577,
+              -5310.687
+            ],
+            [
+              1239.13,
+              -3621.291,
+              -5836.501
+            ],
+            [
+              757.111,
+              -2983.957,
+              -6263.922
+            ],
+            [
+              262.329,
+              -2296.318,
+              -6585.745
+            ],
+            [
+              -236.875,
+              -1569.969,
+              -6796.545
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -6146.388,
+              -667.338,
+              -3238.906
+            ],
+            [
+              -5704.048,
+              -413.493,
+              -4000.849
+            ],
+            [
+              -5161.554,
+              -161.328,
+              -4695.346
+            ],
+            [
+              -4528.091,
+              83.255,
+              -5310.687
+            ],
+            [
+              -3814.471,
+              314.653,
+              -5836.501
+            ],
+            [
+              -3032.946,
+              527.686,
+              -6263.922
+            ],
+            [
+              -2196.995,
+              717.709,
+              -6585.745
+            ],
+            [
+              -1321.085,
+              880.708,
+              -6796.545
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "54361-23405-20260826T004733Z",
+      "tca_utc": "2026-08-26T00:47:33.115Z",
+      "miss_distance_km": 4.23,
+      "relative_velocity_km_s": 9.881,
+      "collision_probability": 1.02e-07,
+      "max_collision_probability": 2.66e-06,
+      "combined_hard_body_radius_m": 6.0,
+      "combined_position_sigma_km": 2.63,
+      "data_age_hours": 20.6,
+      "risk_band": "MODERATE",
+      "india_related": true,
+      "primary": {
+        "norad_id": 54361,
+        "name": "EOS-06 (OCEANSAT-3)",
+        "owner_country": "IND",
+        "object_type": "PAYLOAD",
+        "rcs_size": "LARGE",
+        "launch_date": "2022-11-26",
+        "epoch_utc": "2026-08-22T21:33:58.000Z",
+        "data_age_hours": 8.4,
+        "orbit": {
+          "epoch_utc": "2026-08-22T21:33:58.000Z",
+          "semi_major_axis_km": 7117.037,
+          "eccentricity": 0.0004,
+          "inclination_deg": 98.3,
+          "ra_of_asc_node_deg": 187.66,
+          "arg_of_pericenter_deg": 91.02,
+          "mean_anomaly_deg": 269.13,
+          "mean_motion_rev_per_day": 14.45928306,
+          "bstar": 3.117e-05,
+          "period_minutes": 99.59,
+          "perigee_altitude_km": 736.053,
+          "apogee_altitude_km": 741.747
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            -6404.222,
+            2570.905,
+            1908.774
+          ],
+          "velocity_km_s": [
+            -0.902,
+            -4.418,
+            5.9
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-22T21:33:58.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              -2994.034,
+              544.336,
+              6433.636
+            ],
+            [
+              -2166.307,
+              701.194,
+              6742.971
+            ],
+            [
+              -1304.133,
+              846.902,
+              6945.085
+            ],
+            [
+              -421.223,
+              979.144,
+              7036.765
+            ],
+            [
+              468.386,
+              1095.816,
+              7016.553
+            ],
+            [
+              1350.546,
+              1195.064,
+              6884.77
+            ],
+            [
+              2211.232,
+              1275.309,
+              6643.512
+            ],
+            [
+              3036.757,
+              1335.275,
+              6296.615
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              2902.202,
+              -915.295,
+              6433.636
+            ],
+            [
+              2052.8,
+              -985.176,
+              6742.971
+            ],
+            [
+              1169.959,
+              -1024.307,
+              6945.085
+            ],
+            [
+              268.196,
+              -1031.611,
+              7036.765
+            ],
+            [
+              -637.657,
+              -1006.773,
+              7016.553
+            ],
+            [
+              -1532.707,
+              -950.243,
+              6884.77
+            ],
+            [
+              -2402.246,
+              -863.233,
+              6643.512
+            ],
+            [
+              -3231.997,
+              -747.693,
+              6296.615
+            ]
+          ]
+        }
+      },
+      "secondary": {
+        "norad_id": 23405,
+        "name": "SL-16 R/B",
+        "owner_country": "CIS",
+        "object_type": "ROCKET BODY",
+        "rcs_size": "LARGE",
+        "launch_date": "1994-11-04",
+        "epoch_utc": "2026-08-22T09:20:41.000Z",
+        "data_age_hours": 20.6,
+        "orbit": {
+          "epoch_utc": "2026-08-22T09:20:41.000Z",
+          "semi_major_axis_km": 7224.437,
+          "eccentricity": 0.0016,
+          "inclination_deg": 71.01,
+          "ra_of_asc_node_deg": 88.77,
+          "arg_of_pericenter_deg": 12.44,
+          "mean_anomaly_deg": 348.02,
+          "mean_motion_rev_per_day": 14.13843888,
+          "bstar": 0.00011803,
+          "period_minutes": 101.85,
+          "perigee_altitude_km": 834.741,
+          "apogee_altitude_km": 857.859
+        },
+        "state_at_tca": {
+          "frame": "TEME",
+          "position_km": [
+            -6404.914,
+            2571.66,
+            1907.918
+          ],
+          "velocity_km_s": [
+            3.41,
+            5.492,
+            2.916
+          ]
+        },
+        "track": {
+          "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+          "start_utc": "2026-08-22T09:20:41.000Z",
+          "step_seconds": 120.0,
+          "point_count": 8,
+          "positions_teme_km": [
+            [
+              2094.483,
+              3676.747,
+              -5855.524
+            ],
+            [
+              1945.948,
+              4413.92,
+              -5378.019
+            ],
+            [
+              1767.828,
+              5083.986,
+              -4818.751
+            ],
+            [
+              1562.831,
+              5676.76,
+              -4186.221
+            ],
+            [
+              1334.074,
+              6183.227,
+              -3490.048
+            ],
+            [
+              1085.035,
+              6595.69,
+              -2740.814
+            ],
+            [
+              819.5,
+              6907.876,
+              -1949.911
+            ],
+            [
+              541.506,
+              7115.04,
+              -1129.363
+            ]
+          ],
+          "positions_ecef_km": [
+            [
+              -2538.786,
+              -3385.247,
+              -5855.524
+            ],
+            [
+              -2519.904,
+              -4113.33,
+              -5378.019
+            ],
+            [
+              -2475.106,
+              -4779.747,
+              -4818.751
+            ],
+            [
+              -2403.906,
+              -5374.875,
+              -4186.221
+            ],
+            [
+              -2306.058,
+              -5890.174,
+              -3490.048
+            ],
+            [
+              -2181.582,
+              -6318.317,
+              -2740.814
+            ],
+            [
+              -2030.782,
+              -6653.289,
+              -1949.911
+            ],
+            [
+              -1854.269,
+              -6890.48,
+              -1129.363
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "india": {
+    "screen_kind": "exhaustive",
+    "screen_note": "Every Indian operational LEO satellite is screened against every other catalogued LEO object at every coarse step in the window, with no sampling and no subsetting. GEO is out of scope.",
+    "owner_country_codes": [
+      "IND"
+    ],
+    "objects_screened": 3,
+    "objects": [
+      {
+        "norad_id": 43111,
+        "name": "CARTOSAT-2F",
+        "object_type": "PAYLOAD",
+        "rcs_size": "MEDIUM",
+        "launch_date": "2018-01-12",
+        "data_age_hours": 11.3,
+        "conjunction_count": 1,
+        "worst_risk_band": "CRITICAL"
+      },
+      {
+        "norad_id": 44233,
+        "name": "RISAT-2B",
+        "object_type": "PAYLOAD",
+        "rcs_size": "MEDIUM",
+        "launch_date": "2019-05-22",
+        "data_age_hours": 5.0,
+        "conjunction_count": 1,
+        "worst_risk_band": "HIGH"
+      },
+      {
+        "norad_id": 54361,
+        "name": "EOS-06 (OCEANSAT-3)",
+        "object_type": "PAYLOAD",
+        "rcs_size": "LARGE",
+        "launch_date": "2022-11-26",
+        "data_age_hours": 8.4,
+        "conjunction_count": 1,
+        "worst_risk_band": "MODERATE"
+      }
+    ],
+    "conjunctions": [
+      {
+        "id": "43111-34456-20260824T031522Z",
+        "tca_utc": "2026-08-24T03:15:22.418Z",
+        "miss_distance_km": 0.412,
+        "relative_velocity_km_s": 13.874,
+        "collision_probability": 2.94e-05,
+        "max_collision_probability": 0.000331,
+        "combined_hard_body_radius_m": 1.25,
+        "combined_position_sigma_km": 2.71,
+        "data_age_hours": 24.8,
+        "risk_band": "CRITICAL",
+        "india_related": true,
+        "primary": {
+          "norad_id": 43111,
+          "name": "CARTOSAT-2F",
+          "owner_country": "IND",
+          "object_type": "PAYLOAD",
+          "rcs_size": "MEDIUM",
+          "launch_date": "2018-01-12",
+          "epoch_utc": "2026-08-22T18:41:03.000Z",
+          "data_age_hours": 11.3,
+          "orbit": {
+            "epoch_utc": "2026-08-22T18:41:03.000Z",
+            "semi_major_axis_km": 6883.337,
+            "eccentricity": 0.0012,
+            "inclination_deg": 97.46,
+            "ra_of_asc_node_deg": 214.83,
+            "arg_of_pericenter_deg": 88.21,
+            "mean_anomaly_deg": 271.94,
+            "mean_motion_rev_per_day": 15.2027027,
+            "bstar": 0.00012843,
+            "period_minutes": 94.72,
+            "perigee_altitude_km": 496.94,
+            "apogee_altitude_km": 513.46
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              -1893.442,
+              5104.771,
+              4092.118
+            ],
+            "velocity_km_s": [
+              -4.113,
+              -4.902,
+              4.219
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-22T18:41:03.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                -4540.45,
+                -2430.714,
+                4566.866
+              ],
+              [
+                -4050.635,
+                -1989.282,
+                5197.638
+              ],
+              [
+                -3489.635,
+                -1512.891,
+                5737.067
+              ],
+              [
+                -2867.309,
+                -1009.913,
+                6175.674
+              ],
+              [
+                -2194.593,
+                -489.187,
+                6505.75
+              ],
+              [
+                -1483.309,
+                40.136,
+                6721.496
+              ],
+              [
+                -745.959,
+                568.754,
+                6819.12
+              ],
+              [
+                4.501,
+                1087.377,
+                6796.905
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                -4880.066,
+                1645.908,
+                4566.866
+              ],
+              [
+                -4208.891,
+                1627.921,
+                5197.638
+              ],
+              [
+                -3464.742,
+                1569.063,
+                5737.067
+              ],
+              [
+                -2661.355,
+                1469.208,
+                6175.674
+              ],
+              [
+                -1813.499,
+                1329.195,
+                6505.75
+              ],
+              [
+                -936.697,
+                1150.833,
+                6721.496
+              ],
+              [
+                -46.938,
+                936.874,
+                6819.12
+              ],
+              [
+                839.618,
+                690.977,
+                6796.905
+              ]
+            ]
+          }
+        },
+        "secondary": {
+          "norad_id": 34456,
+          "name": "COSMOS 2251 DEB",
+          "owner_country": "CIS",
+          "object_type": "DEBRIS",
+          "rcs_size": "SMALL",
+          "launch_date": "1993-06-16",
+          "epoch_utc": "2026-08-22T05:12:47.000Z",
+          "data_age_hours": 24.8,
+          "orbit": {
+            "epoch_utc": "2026-08-22T05:12:47.000Z",
+            "semi_major_axis_km": 6890.037,
+            "eccentricity": 0.0138,
+            "inclination_deg": 74.02,
+            "ra_of_asc_node_deg": 41.55,
+            "arg_of_pericenter_deg": 132.6,
+            "mean_anomaly_deg": 228.71,
+            "mean_motion_rev_per_day": 15.18026565,
+            "bstar": 0.0004811,
+            "period_minutes": 94.86,
+            "perigee_altitude_km": 416.817,
+            "apogee_altitude_km": 606.983
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              -1893.902,
+              5104.318,
+              4092.694
+            ],
+            "velocity_km_s": [
+              1.664,
+              -5.061,
+              5.437
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-22T05:12:47.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                -3531.615,
+                -892.085,
+                5848.46
+              ],
+              [
+                -4024.003,
+                -1505.256,
+                5386.484
+              ],
+              [
+                -4445.88,
+                -2092.051,
+                4830.122
+              ],
+              [
+                -4789.854,
+                -2642.188,
+                4189.124
+              ],
+              [
+                -5049.896,
+                -3146.026,
+                3474.72
+              ],
+              [
+                -5221.451,
+                -3594.738,
+                2699.431
+              ],
+              [
+                -5301.511,
+                -3980.46,
+                1876.84
+              ],
+              [
+                -5288.676,
+                -4296.434,
+                1021.361
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                -3067.859,
+                1963.762,
+                5848.46
+              ],
+              [
+                -3835.105,
+                1936.586,
+                5386.484
+              ],
+              [
+                -4536.1,
+                1888.472,
+                4830.122
+              ],
+              [
+                -5158.984,
+                1818.994,
+                4189.124
+              ],
+              [
+                -5693.265,
+                1727.907,
+                3474.72
+              ],
+              [
+                -6130.001,
+                1615.171,
+                2699.431
+              ],
+              [
+                -6461.948,
+                1480.982,
+                1876.84
+              ],
+              [
+                -6683.688,
+                1325.799,
+                1021.361
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "44233-31215-20260823T192810Z",
+        "tca_utc": "2026-08-23T19:28:10.663Z",
+        "miss_distance_km": 1.905,
+        "relative_velocity_km_s": 11.204,
+        "collision_probability": 3.77e-06,
+        "max_collision_probability": 4.18e-05,
+        "combined_hard_body_radius_m": 1.25,
+        "combined_position_sigma_km": 4.29,
+        "data_age_hours": 39.2,
+        "risk_band": "HIGH",
+        "india_related": true,
+        "primary": {
+          "norad_id": 44233,
+          "name": "RISAT-2B",
+          "owner_country": "IND",
+          "object_type": "PAYLOAD",
+          "rcs_size": "MEDIUM",
+          "launch_date": "2019-05-22",
+          "epoch_utc": "2026-08-23T01:07:19.000Z",
+          "data_age_hours": 5.0,
+          "orbit": {
+            "epoch_utc": "2026-08-23T01:07:19.000Z",
+            "semi_major_axis_km": 6933.837,
+            "eccentricity": 0.0009,
+            "inclination_deg": 36.99,
+            "ra_of_asc_node_deg": 305.12,
+            "arg_of_pericenter_deg": 74.66,
+            "mean_anomaly_deg": 285.4,
+            "mean_motion_rev_per_day": 15.03602381,
+            "bstar": 9.902e-05,
+            "period_minutes": 95.77,
+            "perigee_altitude_km": 549.46,
+            "apogee_altitude_km": 561.94
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              4471.108,
+              -4790.226,
+              1281.552
+            ],
+            "velocity_km_s": [
+              4.402,
+              3.041,
+              -3.982
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-23T01:07:19.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                5025.522,
+                -4653.635,
+                1079.773
+              ],
+              [
+                5419.759,
+                -4018.895,
+                1597.747
+              ],
+              [
+                5720.812,
+                -3315.057,
+                2088.252
+              ],
+              [
+                5923.507,
+                -2554.224,
+                2542.853
+              ],
+              [
+                6024.358,
+                -1749.475,
+                2953.734
+              ],
+              [
+                6021.631,
+                -914.646,
+                3313.831
+              ],
+              [
+                5915.373,
+                -64.093,
+                3616.953
+              ],
+              [
+                5707.411,
+                787.563,
+                3857.887
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                -6176.858,
+                -2959.495,
+                1079.773
+              ],
+              [
+                -5762.75,
+                -3509.418,
+                1597.747
+              ],
+              [
+                -5259.168,
+                -4007.3,
+                2088.252
+              ],
+              [
+                -4673.76,
+                -4446.117,
+                2542.853
+              ],
+              [
+                -4015.46,
+                -4819.713,
+                2953.734
+              ],
+              [
+                -3294.348,
+                -5122.879,
+                3313.831
+              ],
+              [
+                -2521.499,
+                -5351.429,
+                3616.953
+              ],
+              [
+                -1708.809,
+                -5502.252,
+                3857.887
+              ]
+            ]
+          }
+        },
+        "secondary": {
+          "norad_id": 31215,
+          "name": "FENGYUN 1C DEB",
+          "owner_country": "PRC",
+          "object_type": "DEBRIS",
+          "rcs_size": "SMALL",
+          "launch_date": "1999-05-10",
+          "epoch_utc": "2026-08-21T14:55:02.000Z",
+          "data_age_hours": 39.2,
+          "orbit": {
+            "epoch_utc": "2026-08-21T14:55:02.000Z",
+            "semi_major_axis_km": 6979.537,
+            "eccentricity": 0.0221,
+            "inclination_deg": 98.71,
+            "ra_of_asc_node_deg": 122.4,
+            "arg_of_pericenter_deg": 210.83,
+            "mean_anomaly_deg": 149.62,
+            "mean_motion_rev_per_day": 14.88833747,
+            "bstar": 0.0007124,
+            "period_minutes": 96.72,
+            "perigee_altitude_km": 447.152,
+            "apogee_altitude_km": 755.648
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              4470.902,
+              -4790.518,
+              1281.905
+            ],
+            "velocity_km_s": [
+              -2.116,
+              1.008,
+              7.298
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-21T14:55:02.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                2883.112,
+                -5469.104,
+                -3238.906
+              ],
+              [
+                2529.237,
+                -5129.337,
+                -4000.849
+              ],
+              [
+                2132.725,
+                -4703.1,
+                -4695.346
+              ],
+              [
+                1700.259,
+                -4197.577,
+                -5310.687
+              ],
+              [
+                1239.13,
+                -3621.291,
+                -5836.501
+              ],
+              [
+                757.111,
+                -2983.957,
+                -6263.922
+              ],
+              [
+                262.329,
+                -2296.318,
+                -6585.745
+              ],
+              [
+                -236.875,
+                -1569.969,
+                -6796.545
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                -6146.388,
+                -667.338,
+                -3238.906
+              ],
+              [
+                -5704.048,
+                -413.493,
+                -4000.849
+              ],
+              [
+                -5161.554,
+                -161.328,
+                -4695.346
+              ],
+              [
+                -4528.091,
+                83.255,
+                -5310.687
+              ],
+              [
+                -3814.471,
+                314.653,
+                -5836.501
+              ],
+              [
+                -3032.946,
+                527.686,
+                -6263.922
+              ],
+              [
+                -2196.995,
+                717.709,
+                -6585.745
+              ],
+              [
+                -1321.085,
+                880.708,
+                -6796.545
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "54361-23405-20260826T004733Z",
+        "tca_utc": "2026-08-26T00:47:33.115Z",
+        "miss_distance_km": 4.23,
+        "relative_velocity_km_s": 9.881,
+        "collision_probability": 1.02e-07,
+        "max_collision_probability": 2.66e-06,
+        "combined_hard_body_radius_m": 6.0,
+        "combined_position_sigma_km": 2.63,
+        "data_age_hours": 20.6,
+        "risk_band": "MODERATE",
+        "india_related": true,
+        "primary": {
+          "norad_id": 54361,
+          "name": "EOS-06 (OCEANSAT-3)",
+          "owner_country": "IND",
+          "object_type": "PAYLOAD",
+          "rcs_size": "LARGE",
+          "launch_date": "2022-11-26",
+          "epoch_utc": "2026-08-22T21:33:58.000Z",
+          "data_age_hours": 8.4,
+          "orbit": {
+            "epoch_utc": "2026-08-22T21:33:58.000Z",
+            "semi_major_axis_km": 7117.037,
+            "eccentricity": 0.0004,
+            "inclination_deg": 98.3,
+            "ra_of_asc_node_deg": 187.66,
+            "arg_of_pericenter_deg": 91.02,
+            "mean_anomaly_deg": 269.13,
+            "mean_motion_rev_per_day": 14.45928306,
+            "bstar": 3.117e-05,
+            "period_minutes": 99.59,
+            "perigee_altitude_km": 736.053,
+            "apogee_altitude_km": 741.747
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              -6404.222,
+              2570.905,
+              1908.774
+            ],
+            "velocity_km_s": [
+              -0.902,
+              -4.418,
+              5.9
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-22T21:33:58.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                -2994.034,
+                544.336,
+                6433.636
+              ],
+              [
+                -2166.307,
+                701.194,
+                6742.971
+              ],
+              [
+                -1304.133,
+                846.902,
+                6945.085
+              ],
+              [
+                -421.223,
+                979.144,
+                7036.765
+              ],
+              [
+                468.386,
+                1095.816,
+                7016.553
+              ],
+              [
+                1350.546,
+                1195.064,
+                6884.77
+              ],
+              [
+                2211.232,
+                1275.309,
+                6643.512
+              ],
+              [
+                3036.757,
+                1335.275,
+                6296.615
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                2902.202,
+                -915.295,
+                6433.636
+              ],
+              [
+                2052.8,
+                -985.176,
+                6742.971
+              ],
+              [
+                1169.959,
+                -1024.307,
+                6945.085
+              ],
+              [
+                268.196,
+                -1031.611,
+                7036.765
+              ],
+              [
+                -637.657,
+                -1006.773,
+                7016.553
+              ],
+              [
+                -1532.707,
+                -950.243,
+                6884.77
+              ],
+              [
+                -2402.246,
+                -863.233,
+                6643.512
+              ],
+              [
+                -3231.997,
+                -747.693,
+                6296.615
+              ]
+            ]
+          }
+        },
+        "secondary": {
+          "norad_id": 23405,
+          "name": "SL-16 R/B",
+          "owner_country": "CIS",
+          "object_type": "ROCKET BODY",
+          "rcs_size": "LARGE",
+          "launch_date": "1994-11-04",
+          "epoch_utc": "2026-08-22T09:20:41.000Z",
+          "data_age_hours": 20.6,
+          "orbit": {
+            "epoch_utc": "2026-08-22T09:20:41.000Z",
+            "semi_major_axis_km": 7224.437,
+            "eccentricity": 0.0016,
+            "inclination_deg": 71.01,
+            "ra_of_asc_node_deg": 88.77,
+            "arg_of_pericenter_deg": 12.44,
+            "mean_anomaly_deg": 348.02,
+            "mean_motion_rev_per_day": 14.13843888,
+            "bstar": 0.00011803,
+            "period_minutes": 101.85,
+            "perigee_altitude_km": 834.741,
+            "apogee_altitude_km": 857.859
+          },
+          "state_at_tca": {
+            "frame": "TEME",
+            "position_km": [
+              -6404.914,
+              2571.66,
+              1907.918
+            ],
+            "velocity_km_s": [
+              3.41,
+              5.492,
+              2.916
+            ]
+          },
+          "track": {
+            "frame_note": "positions_teme_km is inertial (TEME); positions_ecef_km is Earth-fixed",
+            "start_utc": "2026-08-22T09:20:41.000Z",
+            "step_seconds": 120.0,
+            "point_count": 8,
+            "positions_teme_km": [
+              [
+                2094.483,
+                3676.747,
+                -5855.524
+              ],
+              [
+                1945.948,
+                4413.92,
+                -5378.019
+              ],
+              [
+                1767.828,
+                5083.986,
+                -4818.751
+              ],
+              [
+                1562.831,
+                5676.76,
+                -4186.221
+              ],
+              [
+                1334.074,
+                6183.227,
+                -3490.048
+              ],
+              [
+                1085.035,
+                6595.69,
+                -2740.814
+              ],
+              [
+                819.5,
+                6907.876,
+                -1949.911
+              ],
+              [
+                541.506,
+                7115.04,
+                -1129.363
+              ]
+            ],
+            "positions_ecef_km": [
+              [
+                -2538.786,
+                -3385.247,
+                -5855.524
+              ],
+              [
+                -2519.904,
+                -4113.33,
+                -5378.019
+              ],
+              [
+                -2475.106,
+                -4779.747,
+                -4818.751
+              ],
+              [
+                -2403.906,
+                -5374.875,
+                -4186.221
+              ],
+              [
+                -2306.058,
+                -5890.174,
+                -3490.048
+              ],
+              [
+                -2181.582,
+                -6318.317,
+                -2740.814
+              ],
+              [
+                -2030.782,
+                -6653.289,
+                -1949.911
+              ],
+              [
+                -1854.269,
+                -6890.48,
+                -1129.363
+              ]
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
