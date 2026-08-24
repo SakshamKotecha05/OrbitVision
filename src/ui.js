@@ -1,33 +1,17 @@
-import { fmtUtc, fmtDuration, plainLanguageLine } from './data.js';
+import { fmtUtc, fmtDuration, fmtDayLabel } from './data.js';
 
-// Log-scaled position (0..1) of a distance inside [floorKm, ceilKm], so a
-// 0.02 km pass and a 4 km pass both land somewhere legible instead of every
-// non-critical mark bunching up against one end of a linear scale.
-const RULER_FLOOR_KM = 0.01;
-
-function logPct(km, ceilKm) {
-  const clamped = Math.max(km, RULER_FLOOR_KM);
-  const pct = (Math.log10(clamped) - Math.log10(RULER_FLOOR_KM)) / (Math.log10(ceilKm) - Math.log10(RULER_FLOOR_KM));
-  return Math.min(1, Math.max(0, pct));
+// Caption's TCA read: "in 1d 4h" / "4h ago", relative to the scrubbed time.
+function tcaCaption(c, currentTime) {
+  const secs = (new Date(c.tca_utc).getTime() - currentTime.getTime()) / 1000;
+  const dur = fmtDuration(secs).replace(/^[+-]/, '');
+  return secs >= 0 ? `TCA in ${dur}` : `TCA ${dur} ago`;
 }
 
-function missRulerHTML(missKm, thresholdKm, band) {
-  const pct = logPct(missKm, thresholdKm);
-  const top = (1 - pct) * (100 - 8) + 4; // keep the mark clear of the track ends
-  return `
-    <div class="miss-ruler" title="Miss distance ${missKm.toFixed(2)} km against the ${thresholdKm} km reporting threshold">
-      <div class="miss-ruler-track"></div>
-      <div class="miss-ruler-threshold"></div>
-      <div class="miss-ruler-mark band-${band}" style="top:${top}%"></div>
-    </div>
-  `;
-}
-
-export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, thresholdKm, onSelect) {
+export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, onSelect) {
   countEl.textContent = conjunctions.length ? `${conjunctions.length} tracked` : '';
 
+  listEl.innerHTML = '';
   if (conjunctions.length === 0) {
-    listEl.innerHTML = '';
     const empty = document.createElement('div');
     empty.className = 'panel-empty';
     empty.textContent = 'No conjunctions inside the reporting threshold for this window.';
@@ -35,49 +19,31 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
     return;
   }
 
-  listEl.innerHTML = '';
   for (const c of conjunctions) {
     const li = document.createElement('li');
-    li.className = 'risk-row-item';
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `risk-row${c.id === selectedId ? ' is-selected' : ''}`;
+    btn.className = `cardR band-${c.risk_band}${c.id === selectedId ? ' is-selected' : ''}`;
     btn.setAttribute('aria-pressed', String(c.id === selectedId));
 
-    btn.innerHTML = missRulerHTML(c.miss_distance_km, thresholdKm, c.risk_band);
-
-    const content = document.createElement('div');
-    content.className = 'risk-row-content';
-
     const top = document.createElement('div');
-    top.className = 'risk-row-top';
-    const band = document.createElement('span');
-    band.className = `risk-band-tag band-${c.risk_band}`;
-    band.textContent = c.risk_band;
-    top.appendChild(band);
-    if (c.india_related) {
-      const tag = document.createElement('span');
-      tag.className = 'risk-row-india-tag';
-      tag.textContent = 'INDIA';
-      top.appendChild(tag);
-    }
-    content.appendChild(top);
-
-    const line = document.createElement('p');
-    line.className = 'risk-row-line';
-    line.textContent = plainLanguageLine(c, currentTime) + ` Risk: ${titleCase(c.risk_band)}.`;
-    content.appendChild(line);
-
-    const stats = document.createElement('div');
-    stats.className = 'risk-row-stats';
-    stats.innerHTML = `
-      <span>Miss <b>${c.miss_distance_km.toFixed(2)} km</b></span>
-      <span>Max Pc <b>${c.max_collision_probability.toExponential(1)}</b></span>
+    top.className = 'cardR-top';
+    top.innerHTML = `
+      <span class="cardR-names">${c.primary.name} × ${c.secondary.name}</span>
+      <span class="cardR-top-right">${c.india_related ? '<span class="cardR-india-tag">INDIA</span>' : ''}<span class="cardR-band">${c.risk_band}</span></span>
     `;
-    content.appendChild(stats);
+    btn.appendChild(top);
 
-    btn.appendChild(content);
+    const hero = document.createElement('div');
+    hero.className = 'cardR-hero';
+    hero.innerHTML = `${c.miss_distance_km.toFixed(2)}<span>km miss</span>`;
+    btn.appendChild(hero);
+
+    const caption = document.createElement('div');
+    caption.className = 'cardR-caption';
+    caption.innerHTML = `<i></i>Max Pc <b>${c.max_collision_probability.toExponential(1)}</b> &middot; ${tcaCaption(c, currentTime)}`;
+    btn.appendChild(caption);
 
     btn.addEventListener('click', () => onSelect(c.id));
     li.appendChild(btn);
@@ -85,8 +51,25 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
   }
 }
 
-function titleCase(s) {
-  return s.charAt(0) + s.slice(1).toLowerCase();
+// Mission-timeline ruler scaffolding: N-1 day gridlines and N+1 day labels
+// across the loaded window, computed once at load since the window is static.
+export function renderRuler(gridlinesEl, labelsEl, startMs, endMs) {
+  const days = Math.max(1, Math.round((endMs - startMs) / 86400000));
+
+  gridlinesEl.innerHTML = '';
+  for (let i = 1; i < days; i++) {
+    const line = document.createElement('i');
+    line.className = 'gridline';
+    line.style.left = `${(i / days) * 100}%`;
+    gridlinesEl.appendChild(line);
+  }
+
+  labelsEl.innerHTML = '';
+  for (let i = 0; i <= days; i++) {
+    const span = document.createElement('span');
+    span.textContent = fmtDayLabel(startMs + i * 86400000);
+    labelsEl.appendChild(span);
+  }
 }
 
 // Parses "... max_collision_probability >= 1e-4" out of the engine's
@@ -124,7 +107,7 @@ export function renderLegend(barEl, ticksEl, thresholdEl, riskBands) {
   barEl.style.background = `linear-gradient(to right, ${gradientParts.join(', ')})`;
 
   ticksEl.innerHTML = boundaries
-    .map((pc) => `<span class="legend-ruler-tick" style="left:${pcLogPct(pc) * 100}%"></span>`)
+    .map((pc) => `<span class="tick" style="left:${pcLogPct(pc) * 100}%"></span>`)
     .join('');
 
   const critical = boundaries[boundaries.length - 1];
@@ -191,7 +174,15 @@ function metric(label, value, warn) {
 // is what made the bar unreadable at 543 conjunctions: critical passes now
 // read as tall spikes above a low hum of routine ones, like a strip-chart.
 const TICK_HEIGHT_PX = { CRITICAL: 12, HIGH: 9, MODERATE: 5, LOW: 3 };
-const TICK_OPACITY = { CRITICAL: 0.95, HIGH: 0.85, MODERATE: 0.55, LOW: 0.4 };
+
+// ponytail: the density track's `.d` bars stay individually positioned by
+// exact TCA (not bucketed into even time slices) so a risk-row click can
+// still flash "the matching scrub-tick" by conjunction id (report item 7).
+function densityClass(band) {
+  if (band === 'CRITICAL') return 'd crit';
+  if (band === 'HIGH') return 'd hi';
+  return 'd';
+}
 
 export function renderTicks(ticksEl, conjunctions, startMs, endMs, onJump) {
   ticksEl.innerHTML = '';
@@ -202,11 +193,10 @@ export function renderTicks(ticksEl, conjunctions, startMs, endMs, onJump) {
     const pct = ((t - startMs) / span) * 100;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'scrub-tick';
+    btn.className = densityClass(c.risk_band);
+    btn.dataset.id = c.id;
     btn.style.left = `${pct}%`;
     btn.style.height = `${TICK_HEIGHT_PX[c.risk_band] ?? 3}px`;
-    btn.style.setProperty('--tick-opacity', String(TICK_OPACITY[c.risk_band] ?? 0.4));
-    btn.style.background = `var(--${c.risk_band.toLowerCase()})`;
     btn.setAttribute(
       'aria-label',
       `Jump to ${c.primary.name} / ${c.secondary.name} closest approach, ${c.risk_band} risk`,

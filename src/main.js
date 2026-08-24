@@ -1,5 +1,5 @@
 import './style.css';
-import { loadData, uniqueObjects, fmtUtc } from './data.js';
+import { loadData, uniqueObjects, fmtClockTime, fmtDayLabel, fmtCompactUtc } from './data.js';
 import { buildSatrec } from './propagate.js';
 import {
   createGlobe,
@@ -8,7 +8,7 @@ import {
   flyToConjunction,
   flyToIndia,
 } from './globe.js';
-import { renderRiskList, renderDetail, renderTicks, renderLegend } from './ui.js';
+import { renderRiskList, renderDetail, renderTicks, renderLegend, renderRuler } from './ui.js';
 
 // Prefer the real pipeline output when it exists; fall back to the
 // fabricated sample so the demo still runs before the engine has produced
@@ -46,12 +46,16 @@ const el = {
   legendThreshold: document.getElementById('legend-threshold'),
   playToggle: document.getElementById('play-toggle'),
   playIcon: document.getElementById('play-icon'),
-  scrubClock: document.getElementById('scrub-clock'),
+  scrubDate: document.getElementById('scrub-date'),
+  scrubTime: document.getElementById('scrub-time'),
   scrubRel: document.getElementById('scrub-rel'),
   scrubSlider: document.getElementById('scrub-slider'),
   scrubTicks: document.getElementById('scrub-ticks'),
-  scrubStart: document.getElementById('scrub-start'),
-  scrubEnd: document.getElementById('scrub-end'),
+  scrubNeedle: document.getElementById('scrub-needle'),
+  scrubGridlines: document.getElementById('scrub-gridlines'),
+  rulerLabels: document.getElementById('ruler-labels'),
+  scrubWindowHours: document.getElementById('scrub-window-hours'),
+  scrubWindowSpan: document.getElementById('scrub-window-span'),
   speedSelect: document.getElementById('speed-select'),
 };
 
@@ -99,14 +103,14 @@ async function main() {
 
   el.metaWindow.textContent = `${data.screening.window_hours}h`;
   el.metaScreened.textContent = `${data.screening.objects_screened} obj`;
-  el.scrubStart.textContent = fmtUtc(data.screening.window_start_utc);
-  el.scrubEnd.textContent = fmtUtc(data.screening.window_end_utc);
+  el.scrubWindowHours.textContent = `${data.screening.window_hours}H WINDOW`;
+  el.scrubWindowSpan.textContent = `${fmtCompactUtc(state.windowStartMs)} → ${fmtCompactUtc(state.windowEndMs)} UTC`;
+  renderRuler(el.scrubGridlines, el.rulerLabels, state.windowStartMs, state.windowEndMs);
 
   el.uncertaintyNote.innerHTML = `<strong>Uncertainty is modelled, not measured.</strong> ${data.uncertainty_model.summary}`;
   el.uncertaintyNote.hidden = false;
   el.uncertaintyToggle.setAttribute('aria-expanded', 'true');
 
-  const thresholdKm = data.screening.reporting_threshold_km;
   renderLegend(el.legendRulerBar, el.legendRulerTicks, el.legendThreshold, data.risk_bands);
 
   const viewer = await createGlobe('cesiumContainer');
@@ -153,6 +157,35 @@ async function main() {
     renderDetail(el.detailBody, c, state.data.risk_bands);
   }
 
+  // Risk-row click: jump the clock to T-5min before TCA (clamped to the
+  // loaded window), freeze playback, and flash the arrival point.
+  function jumpToTca(c) {
+    const tcaMs = new Date(c.tca_utc).getTime();
+    const target = tcaMs - 5 * 60 * 1000;
+    const clamped = Math.min(Math.max(target, state.windowStartMs), state.windowEndMs);
+    state.currentMs = clamped;
+    state.playing = false;
+    updatePlayIcon();
+    selectConjunction(c.id);
+    syncSliderFromTime();
+    tickVisuals();
+    if (clamped !== target) {
+      const badge = document.createElement('div');
+      badge.className = 'detail-tca-badge';
+      badge.textContent = `TCA outside the loaded ${state.data.screening.window_hours}h window — showing nearest available time.`;
+      el.detailBody.prepend(badge);
+    }
+    flashDestination(c.id);
+  }
+
+  function flashDestination(id) {
+    const targets = [el.scrubNeedle, el.scrubTicks.querySelector(`[data-id="${id}"]`)].filter(Boolean);
+    for (const t of targets) {
+      t.classList.add('is-flash');
+      setTimeout(() => t.classList.remove('is-flash'), 600);
+    }
+  }
+
   function backToList() {
     state.selectedId = null;
     if (state.highlight) {
@@ -166,9 +199,10 @@ async function main() {
 
   function renderList() {
     const list = activeConjunctions();
-    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), thresholdKm, (id) =>
-      selectConjunction(id),
-    );
+    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), (id) => {
+      const c = list.find((x) => x.id === id) ?? state.data.conjunctions.find((x) => x.id === id);
+      if (c) jumpToTca(c);
+    });
     renderTicks(el.scrubTicks, list, state.windowStartMs, state.windowEndMs, (c) => {
       state.currentMs = new Date(c.tca_utc).getTime();
       state.playing = false;
@@ -248,13 +282,16 @@ async function main() {
     const date = new Date(state.currentMs);
     cloud.update(date, visibleNoradIds());
     if (state.highlight) state.highlight.update(date);
-    el.scrubClock.textContent = fmtUtc(date.toISOString());
+    el.scrubDate.textContent = fmtDayLabel(state.currentMs);
+    el.scrubTime.textContent = fmtClockTime(state.currentMs);
     const untilTca = state.selectedId
       ? state.data.conjunctions.find((c) => c.id === state.selectedId)
       : null;
     el.scrubRel.textContent = untilTca
       ? `TCA ${untilTca.risk_band.toLowerCase()} in view`
-      : `t+${Math.round((state.currentMs - state.windowStartMs) / 60000)} min`;
+      : `T+${Math.round((state.currentMs - state.windowStartMs) / 60000)} min`;
+    const pct = ((state.currentMs - state.windowStartMs) / (state.windowEndMs - state.windowStartMs)) * 100;
+    el.scrubNeedle.style.left = `${Math.min(100, Math.max(0, pct))}%`;
   }
 
   let lastFrameMs = performance.now();

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -59,34 +59,31 @@
         </div>
       </header>
 
-      <div
-        id="uncertainty-note"
-        class="uncertainty-note"
-        role="note"
-        hidden
-      ></div>
-
       <main class="globe-wrap">
         <div id="cesiumContainer"></div>
 
-        <div class="legend" aria-hidden="false">
-          <span class="legend-title">Risk band by max Pc</span>
-          <div class="legend-ruler" id="legend-ruler">
-            <div class="legend-ruler-bar" id="legend-ruler-bar"></div>
-            <div class="legend-ruler-ticks" id="legend-ruler-ticks"></div>
-            <div class="legend-ruler-labels">
-              <span class="band-LOW">Low</span>
-              <span class="band-MODERATE">Mod</span>
-              <span class="band-HIGH">High</span>
-              <span class="band-CRITICAL">Crit</span>
-            </div>
+        <div id="uncertainty-note" class="unc-new" role="note" hidden></div>
+
+        <div class="legend-new" aria-hidden="false">
+          <div class="row1">
+            <span class="title">Risk band by max Pc</span>
+            <span class="threshold" id="legend-threshold"></span>
           </div>
-          <span class="legend-threshold" id="legend-threshold"></span>
+          <div class="instrument">
+            <div class="bar" id="legend-ruler-bar"></div>
+            <div id="legend-ruler-ticks"></div>
+          </div>
+          <div class="band-labels">
+            <span class="chip low"><i></i>Low</span>
+            <span class="chip mod"><i></i>Mod</span>
+            <span class="chip high"><i></i>High</span>
+            <span class="chip crit"><i></i>Crit</span>
+          </div>
         </div>
 
-        <div class="india-banner" id="india-banner" hidden>
-          <div class="india-banner-title">India Watch</div>
-          <div class="india-banner-copy" id="india-banner-copy"></div>
+        <div class="india-new" id="india-banner" hidden>
+          <div class="t">India Watch</div>
+          <div class="copy" id="india-banner-copy"></div>
         </div>
       </main>
 
@@ -96,7 +93,7 @@
             <h2 id="panel-heading">Ranked risks</h2>
             <span class="panel-count" id="panel-count"></span>
           </div>
-          <ol class="risk-rows" id="risk-rows" tabindex="-1"></ol>
+          <ol class="cardR-list" id="risk-rows" tabindex="-1"></ol>
         </div>
 
         <div class="panel-detail" id="panel-detail" hidden>
@@ -105,45 +102,58 @@
         </div>
       </aside>
 
-      <footer class="scrub-bar">
-        <button type="button" id="play-toggle" class="play-btn" aria-label="Play time scrub">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" id="play-icon">
-            <path d="M8 5v14l11-7z" fill="currentColor" />
-          </svg>
-        </button>
+      <footer class="scrub-new">
+        <div class="scrub-top">
+          <div class="scrub-controls">
+            <button type="button" id="play-toggle" class="play" aria-label="Play time scrub">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" id="play-icon">
+                <path d="M8 5v14l11-7z" fill="currentColor" />
+              </svg>
+            </button>
 
-        <div class="scrub-time">
-          <span id="scrub-clock">-</span>
-          <span class="scrub-rel" id="scrub-rel"></span>
+            <div class="clockblock">
+              <div class="clock">
+                <span class="date" id="scrub-date">-</span>
+                <span class="time" id="scrub-time">-</span>
+                <span class="tz">UTC</span>
+              </div>
+              <div class="rel" id="scrub-rel"></div>
+            </div>
+
+            <div class="scrub-speed">
+              <label for="speed-select" class="sr-only">Playback speed</label>
+              <select id="speed-select">
+                <option value="60">1 min/s</option>
+                <option value="300" selected>5 min/s</option>
+                <option value="900">15 min/s</option>
+                <option value="3600">1 hr/s</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="scrub-window">
+            <span id="scrub-window-hours">-</span>
+            <span id="scrub-window-span">-</span>
+          </div>
         </div>
 
-        <div class="scrub-track-wrap">
-          <input
-            type="range"
-            id="scrub-slider"
-            class="scrub-slider"
-            min="0"
-            max="1000"
-            value="0"
-            step="1"
-            aria-label="Scrub prediction window"
-          />
-          <div class="scrub-ticks" id="scrub-ticks" aria-hidden="true"></div>
-        </div>
-
-        <div class="scrub-bounds">
-          <span id="scrub-start">-</span>
-          <span id="scrub-end">-</span>
-        </div>
-
-        <div class="scrub-speed">
-          <label for="speed-select" class="sr-only">Playback speed</label>
-          <select id="speed-select">
-            <option value="60">1 min/s</option>
-            <option value="300" selected>5 min/s</option>
-            <option value="900">15 min/s</option>
-            <option value="3600">1 hr/s</option>
-          </select>
+        <div class="scrub-ruler">
+          <div class="ruler-labels" id="ruler-labels"></div>
+          <div class="track" id="scrub-track">
+            <div class="gridlines" id="scrub-gridlines"></div>
+            <div class="density" id="scrub-ticks" aria-hidden="true"></div>
+            <div class="needle" id="scrub-needle"></div>
+            <input
+              type="range"
+              id="scrub-slider"
+              class="scrub-slider"
+              min="0"
+              max="1000"
+              value="0"
+              step="1"
+              aria-label="Scrub prediction window"
+            />
+          </div>
         </div>
       </footer>
     </div>
