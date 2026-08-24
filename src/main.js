@@ -10,7 +10,20 @@ import {
 } from './globe.js';
 import { renderRiskList, renderDetail, renderTicks } from './ui.js';
 
-const dataUrl = new URLSearchParams(location.search).get('data') || 'data/sample-output.json';
+// Prefer the real pipeline output when it exists; fall back to the
+// fabricated sample so the demo still runs before the engine has produced
+// data/output.json. ?data= always wins when given explicitly.
+async function resolveDataUrl() {
+  const explicit = new URLSearchParams(location.search).get('data');
+  if (explicit) return explicit;
+  try {
+    const res = await fetch('data/output.json', { method: 'HEAD' });
+    if (res.ok) return 'data/output.json';
+  } catch {
+    // network error probing for the real file: fall through to the sample
+  }
+  return 'data/sample-output.json';
+}
 
 const el = {
   modeGlobal: document.getElementById('mode-global'),
@@ -57,6 +70,7 @@ const state = {
 };
 
 async function main() {
+  const dataUrl = await resolveDataUrl();
   const data = await loadData(dataUrl);
   state.data = data;
 

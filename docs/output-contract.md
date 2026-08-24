@@ -65,6 +65,13 @@ It is never used for a computed quantity.
 | `pairs_after_coarse_sweep` | integer | Survivors of pass 2. |
 | `conjunctions_reported` | integer | Length of `conjunctions`. |
 | `runtime_seconds` | number | Wall clock for the run. |
+| `conjunctions_found` | integer | True refined conjunctions inside `reporting_threshold_km`, before the pair collapse below and before `general_list_cap`. |
+| `distinct_pairs_found` | integer | Distinct object pairs remaining after the pair collapse, before `general_list_cap`. |
+| `pair_collapse_note` | string | Explains the pair collapse: each object pair is reduced to its single worst encounter in the window, so a formation-flying or co-orbiting pair does not repeat every revolution and crowd out distinct risks. "Worst" is the same ordering used to rank the final list: worst risk band, then highest `max_collision_probability`, then lowest `miss_distance_km`. |
+| `general_list_cap` | integer | The general list keeps only this many of the worst distinct pairs; every India-related conjunction is kept regardless of rank. |
+| `excluded_pairs` | object | Documents the two pair-exclusion rules (same mega-constellation, same docked assembly) so nothing is dropped silently: `rules`, `constellations`, `objects_in_excluded_constellations`, `objects_in_docked_assemblies`, `note`. |
+
+`conjunctions_found`, `distinct_pairs_found`, `pair_collapse_note`, `general_list_cap` and `excluded_pairs` are additive: they were not present in the original pinned shape and `data/sample-output.json` predates them (its 4 records need no capping or collapse), but the frontend does not depend on their absence, and no existing key changed meaning.
 
 These counters exist so the filter cascade can be shown working, which is most of the technical story.
 
