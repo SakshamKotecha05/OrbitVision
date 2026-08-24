@@ -70,8 +70,9 @@ It is never used for a computed quantity.
 | `pair_collapse_note` | string | Explains the pair collapse: each object pair is reduced to its single worst encounter in the window, so a formation-flying or co-orbiting pair does not repeat every revolution and crowd out distinct risks. "Worst" is the same ordering used to rank the final list: worst risk band, then highest `max_collision_probability`, then lowest `miss_distance_km`. |
 | `general_list_cap` | integer | The general list keeps only this many of the worst distinct pairs; every India-related conjunction is kept regardless of rank. |
 | `excluded_pairs` | object | Documents the two pair-exclusion rules (same mega-constellation, same docked assembly) so nothing is dropped silently: `rules`, `constellations`, `objects_in_excluded_constellations`, `objects_in_docked_assemblies`, `note`. |
+| `formation_flying_screen` | object | Encounters with a relative velocity at TCA below `min_relative_velocity_km_s` are excluded before scoring, since Chan's method needs relative motion to define the encounter plane: `min_relative_velocity_km_s`, `encounters_excluded`, `rationale`. |
 
-`conjunctions_found`, `distinct_pairs_found`, `pair_collapse_note`, `general_list_cap` and `excluded_pairs` are additive: they were not present in the original pinned shape and `data/sample-output.json` predates them (its 4 records need no capping or collapse), but the frontend does not depend on their absence, and no existing key changed meaning.
+`conjunctions_found`, `distinct_pairs_found`, `pair_collapse_note`, `general_list_cap`, `excluded_pairs` and `formation_flying_screen` are additive: they were not present in the original pinned shape and `data/sample-output.json` predates them (its 4 records need no capping, collapse or formation-flying screening), but the frontend does not depend on their absence, and no existing key changed meaning.
 
 These counters exist so the filter cascade can be shown working, which is most of the technical story.
 
@@ -96,7 +97,7 @@ It is emitted in every output file and it must not be dropped from the UI.
 ## `risk_bands`
 
 `order` lists the bands worst first: `CRITICAL`, `HIGH`, `MODERATE`, `LOW`.
-`basis` states that banding uses maximum Pc and miss distance together, never nominal Pc alone.
+`basis` states that banding uses maximum Pc alone: never nominal Pc, and never miss distance.
 `rules` gives the literal thresholds, as strings, so the UI can show them.
 
 ## A conjunction record

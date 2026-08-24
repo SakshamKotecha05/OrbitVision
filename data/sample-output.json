@@ -59,12 +59,12 @@
       "MODERATE",
       "LOW"
     ],
-    "basis": "Banding uses maximum Pc and miss distance together, never nominal Pc alone, because probability dilution makes stale data score a deceptively low nominal Pc.",
+    "basis": "Banding uses maximum Pc alone -- never nominal Pc, because probability dilution makes stale data score a deceptively low nominal Pc, and never miss distance, because combined_position_sigma_km in this regime (single digits to tens of km) is orders of magnitude larger than any distance cutoff worth drawing, and max_pc already folds that uncertainty in correctly.",
     "rules": {
-      "CRITICAL": "max_collision_probability >= 1e-4 or miss_distance_km < 0.5",
-      "HIGH": "max_collision_probability >= 1e-5 or miss_distance_km < 1.0",
-      "MODERATE": "max_collision_probability >= 1e-6 or miss_distance_km < 5.0",
-      "LOW": "everything else inside the reporting threshold"
+      "CRITICAL": "max_collision_probability >= 1e-4",
+      "HIGH": "max_collision_probability >= 1e-5",
+      "MODERATE": "max_collision_probability >= 1e-6",
+      "LOW": "max_collision_probability < 1e-6"
     }
   },
   "conjunctions": [

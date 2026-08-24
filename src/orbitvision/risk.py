@@ -44,13 +44,44 @@ HARD_BODY_RADIUS_M = {
     "UNKNOWN": 1.0,
 }
 
+# Chan's (1997) method defines the encounter plane from the relative-velocity
+# direction and rests on the relative motion being locally linear across a
+# brief flyby. Both requirements need actual relative motion to exist: as
+# relative velocity goes to zero the encounter plane is undefined and there
+# is no flyby to linearise, so a pair below this floor is outside the
+# method's domain of validity, not merely imprecise inside it. Formation-
+# flying and co-orbiting pairs (COSMOS 2581/2582, TIANHUI 2-02A/B, ...)
+# share essentially identical orbital elements by design and sit far below
+# this floor; two independently launched LEO objects differ enough in RAAN
+# and inclination -- distinct launches, distinct nodal precession under J2
+# -- that a genuine chance close approach between them is essentially never
+# this slow. The floor is set an order of magnitude above the fastest
+# published station-keeping/formation differential velocities (order
+# 0.01 km/s) and several orders of magnitude below genuine LEO conjunction
+# speeds (up to ~15 km/s, see screening.MAX_RELATIVE_VELOCITY_KM_S), so it
+# is not tuned to any specific pair.
+MIN_RELATIVE_VELOCITY_KM_S = 0.1
+
 RISK_BAND_ORDER = ["CRITICAL", "HIGH", "MODERATE", "LOW"]
+# Thresholds on max_collision_probability alone, from published conjunction-
+# assessment practice: 1e-4 is the NASA/CARA maneuver threshold used for
+# crewed assets such as the ISS; 1e-5 is the standard CARA maneuver
+# threshold for robotic spacecraft; 1e-6 is the general screening /
+# "conjunction of interest" watch threshold used across NASA and 18th Space
+# Defense Squadron practice. See risk_band() for why miss distance plays no
+# part in this.
 RISK_BAND_RULES = {
-    "CRITICAL": "max_collision_probability >= 1e-4 or miss_distance_km < 0.5",
-    "HIGH": "max_collision_probability >= 1e-5 or miss_distance_km < 1.0",
-    "MODERATE": "max_collision_probability >= 1e-6 or miss_distance_km < 5.0",
-    "LOW": "everything else inside the reporting threshold",
+    "CRITICAL": "max_collision_probability >= 1e-4",
+    "HIGH": "max_collision_probability >= 1e-5",
+    "MODERATE": "max_collision_probability >= 1e-6",
+    "LOW": "max_collision_probability < 1e-6",
 }
+
+
+def is_formation_flying(relative_velocity_km_s):
+    """True when relative velocity at TCA is too low for Chan's method to
+    apply -- see MIN_RELATIVE_VELOCITY_KM_S for the physics."""
+    return relative_velocity_km_s < MIN_RELATIVE_VELOCITY_KM_S
 
 
 def synthesized_sigma_km(data_age_hours):
@@ -137,16 +168,25 @@ def max_chan_pc(miss_km, sigma_nominal_km, hbr_km):
     return max(f(lo), f(hi), fc, fd, nominal)
 
 
-def risk_band(max_pc, miss_distance_km):
-    """Band from maximum Pc and miss distance together, never nominal Pc
-    alone -- probability dilution can make stale data look deceptively
-    safe under nominal Pc.
+def risk_band(max_pc):
+    """Band from maximum Pc alone -- never nominal Pc, never miss distance.
+
+    Nominal Pc is excluded because probability dilution can make stale,
+    uncertain data look deceptively safe under nominal Pc; max_pc is the
+    figure that prices uncertainty in correctly (see max_chan_pc).
+
+    Miss distance is excluded because it cannot carry more information than
+    the uncertainty already reflected in max_pc: combined_position_sigma_km
+    in this engine's regime runs from single digits to tens of km, so a
+    14 m miss and a 400 m miss are indistinguishable within that error bar,
+    and any fixed distance cutoff smaller than the sigma is asserting
+    precision the underlying data does not have.
     """
-    if max_pc >= 1e-4 or miss_distance_km < 0.5:
+    if max_pc >= 1e-4:
         return "CRITICAL"
-    if max_pc >= 1e-5 or miss_distance_km < 1.0:
+    if max_pc >= 1e-5:
         return "HIGH"
-    if max_pc >= 1e-6 or miss_distance_km < 5.0:
+    if max_pc >= 1e-6:
         return "MODERATE"
     return "LOW"
 
@@ -181,9 +221,28 @@ def risk_bands_block():
     return {
         "order": list(RISK_BAND_ORDER),
         "basis": (
-            "Banding uses maximum Pc and miss distance together, never "
-            "nominal Pc alone, because probability dilution makes stale "
-            "data score a deceptively low nominal Pc."
+            "Banding uses maximum Pc alone -- never nominal Pc, because "
+            "probability dilution makes stale data score a deceptively low "
+            "nominal Pc, and never miss distance, because "
+            "combined_position_sigma_km in this regime (single digits to "
+            "tens of km) is orders of magnitude larger than any distance "
+            "cutoff worth drawing, and max_pc already folds that "
+            "uncertainty in correctly."
         ),
         "rules": dict(RISK_BAND_RULES),
+    }
+
+
+def formation_flying_screen_block(encounters_excluded):
+    return {
+        "min_relative_velocity_km_s": MIN_RELATIVE_VELOCITY_KM_S,
+        "encounters_excluded": encounters_excluded,
+        "rationale": (
+            "Encounters with a relative velocity below this floor at TCA "
+            "are excluded before scoring, not banded LOW: Chan's method "
+            "needs relative motion to define the encounter plane and to "
+            "linearise across a brief flyby, and a pair this slow is not "
+            "flying past at all, it is holding station. See "
+            "MIN_RELATIVE_VELOCITY_KM_S in risk.py."
+        ),
     }

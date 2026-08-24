@@ -107,7 +107,7 @@ async function main() {
   el.uncertaintyToggle.setAttribute('aria-expanded', 'true');
 
   const thresholdKm = data.screening.reporting_threshold_km;
-  renderLegend(el.legendRulerBar, el.legendRulerTicks, el.legendThreshold, data.risk_bands, thresholdKm);
+  renderLegend(el.legendRulerBar, el.legendRulerTicks, el.legendThreshold, data.risk_bands);
 
   const viewer = await createGlobe('cesiumContainer');
   const entries = [...state.objects.entries()].map(([noradId, v]) => ({
