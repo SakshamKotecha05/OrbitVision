@@ -9,3 +9,7 @@ dist/
 cache/
 data/output.json
 .impeccable/
+
+# Local-only agent instruction files - never committed
+AGENTS.md
+CLAUDE.md
