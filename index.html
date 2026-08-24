@@ -5,14 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OrbitVision - Conjunction Risk Console</title>
     <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app">
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-name">ORBITVISION</span>
-          <span class="brand-sub">conjunction risk console</span>
+          <svg class="brand-glyph" viewBox="0 0 26 14" width="26" height="14" aria-hidden="true">
+            <line x1="3" y1="11" x2="23" y2="3" class="brand-glyph-line" />
+            <circle cx="3" cy="11" r="2.75" class="brand-glyph-primary" />
+            <circle cx="23" cy="3" r="2.75" class="brand-glyph-secondary" />
+          </svg>
+          <div class="brand-text">
+            <span class="brand-name">Orbit<b>Vision</b></span>
+            <span class="brand-sub">Conjunction Risk Bulletin</span>
+          </div>
         </div>
 
         <nav class="mode-switch" role="tablist" aria-label="View mode">
@@ -25,6 +37,7 @@
           >
             Global Screen
           </button>
+          <span class="mode-divider" aria-hidden="true"></span>
           <button type="button" id="mode-india" class="mode-btn" role="tab" aria-selected="false">
             India Watch
           </button>
@@ -57,11 +70,18 @@
         <div id="cesiumContainer"></div>
 
         <div class="legend" aria-hidden="false">
-          <span class="legend-title">Risk band</span>
-          <span class="legend-chip band-critical">Critical</span>
-          <span class="legend-chip band-high">High</span>
-          <span class="legend-chip band-moderate">Moderate</span>
-          <span class="legend-chip band-low">Low</span>
+          <span class="legend-title">Risk band by miss distance</span>
+          <div class="legend-ruler" id="legend-ruler">
+            <div class="legend-ruler-bar" id="legend-ruler-bar"></div>
+            <div class="legend-ruler-ticks" id="legend-ruler-ticks"></div>
+            <div class="legend-ruler-labels">
+              <span class="band-CRITICAL">Crit</span>
+              <span class="band-HIGH">High</span>
+              <span class="band-MODERATE">Mod</span>
+              <span class="band-LOW">Low</span>
+            </div>
+          </div>
+          <span class="legend-threshold" id="legend-threshold"></span>
         </div>
 
         <div class="india-banner" id="india-banner" hidden>

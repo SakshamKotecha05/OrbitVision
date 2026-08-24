@@ -8,7 +8,7 @@ import {
   flyToConjunction,
   flyToIndia,
 } from './globe.js';
-import { renderRiskList, renderDetail, renderTicks } from './ui.js';
+import { renderRiskList, renderDetail, renderTicks, renderLegend } from './ui.js';
 
 // Prefer the real pipeline output when it exists; fall back to the
 // fabricated sample so the demo still runs before the engine has produced
@@ -41,6 +41,9 @@ const el = {
   detailBody: document.getElementById('detail-body'),
   indiaBanner: document.getElementById('india-banner'),
   indiaBannerCopy: document.getElementById('india-banner-copy'),
+  legendRulerBar: document.getElementById('legend-ruler-bar'),
+  legendRulerTicks: document.getElementById('legend-ruler-ticks'),
+  legendThreshold: document.getElementById('legend-threshold'),
   playToggle: document.getElementById('play-toggle'),
   playIcon: document.getElementById('play-icon'),
   scrubClock: document.getElementById('scrub-clock'),
@@ -103,6 +106,9 @@ async function main() {
   el.uncertaintyNote.hidden = false;
   el.uncertaintyToggle.setAttribute('aria-expanded', 'true');
 
+  const thresholdKm = data.screening.reporting_threshold_km;
+  renderLegend(el.legendRulerBar, el.legendRulerTicks, el.legendThreshold, data.risk_bands, thresholdKm);
+
   const viewer = await createGlobe('cesiumContainer');
   const entries = [...state.objects.entries()].map(([noradId, v]) => ({
     noradId,
@@ -160,7 +166,7 @@ async function main() {
 
   function renderList() {
     const list = activeConjunctions();
-    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), (id) =>
+    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), thresholdKm, (id) =>
       selectConjunction(id),
     );
     renderTicks(el.scrubTicks, list, state.windowStartMs, state.windowEndMs, (c) => {
