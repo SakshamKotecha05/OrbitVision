@@ -47,10 +47,22 @@ export function fmtDuration(seconds) {
   return `${sign}${m}m`;
 }
 
-export function plainLanguageLine(c, refDate) {
-  const t = (new Date(c.tca_utc).getTime() - refDate.getTime()) / 1000;
-  const inFuture = t > 0;
-  const dur = fmtDuration(t).replace(/^[+-]/, '');
-  const when = inFuture ? `in ${dur}` : `${dur} ago`;
-  return `${c.primary.name} and ${c.secondary.name} pass within ${c.miss_distance_km.toFixed(2)} km of each other ${when}.`;
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+// Mission-timeline strip formatting: day label ("23 AUG"), bare clock time
+// ("17:41:16"), and a compact date+time for the window readout ("23 AUG 00:00").
+export function fmtDayLabel(ms) {
+  const d = new Date(ms);
+  return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+export function fmtClockTime(ms) {
+  const d = new Date(ms);
+  return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
+export function fmtCompactUtc(ms) {
+  const d = new Date(ms);
+  const hm = [d.getUTCHours(), d.getUTCMinutes()].map((n) => String(n).padStart(2, '0')).join(':');
+  return `${fmtDayLabel(ms)} ${hm}`;
 }
