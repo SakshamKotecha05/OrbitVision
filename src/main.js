@@ -1,12 +1,14 @@
 import './style.css';
 import { loadData, uniqueObjects, fmtClockTime, fmtDayLabel, fmtCompactUtc } from './data.js';
 import { buildSatrec } from './propagate.js';
+import * as Cesium from 'cesium';
 import {
   createGlobe,
   buildObjectCloud,
   highlightConjunction,
   flyToConjunction,
   flyToIndia,
+  attachHoverTooltip,
 } from './globe.js';
 import { renderRiskList, renderDetail, renderTicks, renderLegend, renderRuler } from './ui.js';
 
@@ -57,6 +59,7 @@ const el = {
   scrubWindowHours: document.getElementById('scrub-window-hours'),
   scrubWindowSpan: document.getElementById('scrub-window-span'),
   speedSelect: document.getElementById('speed-select'),
+  globeTooltip: document.getElementById('globe-tooltip'),
 };
 
 const SLIDER_MAX = 1000;
@@ -121,6 +124,7 @@ async function main() {
     band: v.band,
   }));
   const cloud = buildObjectCloud(viewer, entries);
+  attachHoverTooltip(viewer, el.globeTooltip);
 
   function satrecOf(noradId) {
     return state.objects.get(noradId).satrec;
@@ -280,6 +284,7 @@ async function main() {
 
   function tickVisuals() {
     const date = new Date(state.currentMs);
+    viewer.clock.currentTime = Cesium.JulianDate.fromDate(date);
     cloud.update(date, visibleNoradIds());
     if (state.highlight) state.highlight.update(date);
     el.scrubDate.textContent = fmtDayLabel(state.currentMs);
