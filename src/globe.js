@@ -13,13 +13,63 @@ export const BAND_COLOR = {
 const ACCENT_CYAN = Cesium.Color.fromCssColorString('#5AC8FA');
 const ACCENT_SAFFRON = Cesium.Color.fromCssColorString('#FFB454');
 
+// One revolution every 5 minutes: reads as a stately planet turning, not a
+// spinning toy. Camera-only orbit around the ECEF Z axis, never the clock -
+// the mission timeline alone owns simulated time, and ground tracks are
+// sampled per-point with their own GMST, so nothing here may nudge it.
+const IDLE_ROTATE_RADIANS_PER_SEC = (2 * Math.PI) / 300;
+const IDLE_RESUME_MS = 4000;
+
+function setupIdleRotation(viewer) {
+  const canvas = viewer.scene.canvas;
+  let lastInteractionMs = performance.now();
+  let pointerDown = false;
+
+  function markInteraction() {
+    lastInteractionMs = performance.now();
+  }
+  function onPointerDown() {
+    pointerDown = true;
+    markInteraction();
+  }
+  function onPointerUp() {
+    pointerDown = false;
+    markInteraction();
+  }
+  function onPointerMove() {
+    if (pointerDown) markInteraction();
+  }
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  canvas.addEventListener('touchstart', onPointerDown, { passive: true });
+  canvas.addEventListener('wheel', markInteraction, { passive: true });
+  canvas.addEventListener('mousemove', onPointerMove);
+  canvas.addEventListener('touchmove', onPointerMove, { passive: true });
+  window.addEventListener('mouseup', onPointerUp);
+  window.addEventListener('touchend', onPointerUp);
+
+  let lastFrameMs = performance.now();
+  viewer.scene.preRender.addEventListener(() => {
+    const nowMs = performance.now();
+    const deltaS = (nowMs - lastFrameMs) / 1000;
+    lastFrameMs = nowMs;
+
+    if (!pointerDown && nowMs - lastInteractionMs > IDLE_RESUME_MS) {
+      viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, -IDLE_ROTATE_RADIANS_PER_SEC * deltaS);
+    }
+  });
+
+  // flyToConjunction / flyToIndia call this so a camera flight always wins
+  // and idle rotation only resumes once it has settled.
+  viewer.orbitVisionMarkInteraction = markInteraction;
+}
+
 export async function createGlobe(containerId) {
-  const imageryProvider = Cesium.TileMapServiceImageryProvider.fromUrl(
-    Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII'),
-  );
+  const dayProvider = Cesium.SingleTileImageryProvider.fromUrl('textures/earth-day.jpg');
+  const nightProvider = Cesium.SingleTileImageryProvider.fromUrl('textures/earth-night.jpg');
 
   const viewer = new Cesium.Viewer(containerId, {
-    baseLayer: Cesium.ImageryLayer.fromProviderAsync(imageryProvider),
+    baseLayer: Cesium.ImageryLayer.fromProviderAsync(dayProvider),
     baseLayerPicker: false,
     geocoder: false,
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
@@ -34,12 +84,29 @@ export async function createGlobe(containerId) {
     shouldAnimate: false,
   });
 
-  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#04060A');
-  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#04060A');
-  viewer.scene.skyAtmosphere.hueShift = -0.05;
-  viewer.scene.skyAtmosphere.saturationShift = -0.35;
-  viewer.scene.skyAtmosphere.brightnessShift = -0.3;
+  // City lights layer: dayAlpha 0 keeps it invisible on the lit hemisphere,
+  // nightAlpha 1 shows it wherever enableLighting says the sun isn't up.
+  const nightLayer = Cesium.ImageryLayer.fromProviderAsync(nightProvider);
+  nightLayer.dayAlpha = 0.0;
+  nightLayer.nightAlpha = 1.0;
+  viewer.scene.imageryLayers.add(nightLayer);
+
+  const globe = viewer.scene.globe;
+  globe.enableLighting = true;
+  globe.dynamicAtmosphereLighting = true;
+  globe.showGroundAtmosphere = true;
+  globe.baseColor = Cesium.Color.fromCssColorString('#050912');
+
+  // Cesium's realistic-atmosphere defaults (0/0/0) - the previous build
+  // fought them with three negative shifts, which is what flattened the
+  // limb glow into a cartoon halo.
+  viewer.scene.skyAtmosphere.hueShift = 0.0;
+  viewer.scene.skyAtmosphere.saturationShift = 0.0;
+  viewer.scene.skyAtmosphere.brightnessShift = 0.0;
+
   viewer.cesiumWidget.creditContainer.style.display = 'none';
+
+  setupIdleRotation(viewer);
 
   return viewer;
 }
@@ -47,6 +114,12 @@ export async function createGlobe(containerId) {
 function toCartesian(ecefKm) {
   return new Cesium.Cartesian3(ecefKm[0] * 1000, ecefKm[1] * 1000, ecefKm[2] * 1000);
 }
+
+// Light outline (was near-black): against a lit photographic globe a black
+// ring can vanish into the night hemisphere or shadowed ocean, where the
+// old flat-black scene never had that problem. A light ring holds contrast
+// on both the lit and unlit sides.
+const POINT_OUTLINE = Cesium.Color.fromCssColorString('#E6EDF3').withAlpha(0.85);
 
 // The bulk object cloud: PointPrimitiveCollection, not Entity, so scrubbing
 // stays smooth however many objects the real engine ends up reporting.
@@ -56,13 +129,12 @@ export function buildObjectCloud(viewer, entries) {
     const isIndian = e.obj.owner_country === 'IND';
     const primitive = collection.add({
       position: Cesium.Cartesian3.ZERO,
-      pixelSize: isIndian ? 10 : e.band === 'CRITICAL' || e.band === 'HIGH' ? 8 : 6,
+      pixelSize: isIndian ? 10 : e.band === 'CRITICAL' || e.band === 'HIGH' ? 8 : 7,
       color: isIndian ? ACCENT_SAFFRON : BAND_COLOR[e.band],
-      outlineColor: isIndian
-        ? Cesium.Color.fromCssColorString('#3A2A0F')
-        : Cesium.Color.fromCssColorString('#04060A'),
-      outlineWidth: isIndian ? 2 : 1,
+      outlineColor: isIndian ? Cesium.Color.fromCssColorString('#3A2A0F') : POINT_OUTLINE,
+      outlineWidth: isIndian ? 2 : 1.5,
       show: false,
+      id: { isFleetObject: true, name: e.obj.name, band: e.band, isIndian },
     });
     return { ...e, primitive };
   });
@@ -180,15 +252,67 @@ export function flyToConjunction(viewer, conjunction, satrecOf) {
   if (points.length === 0) return;
   const sphere = Cesium.BoundingSphere.fromPoints(points);
   sphere.radius = Math.max(sphere.radius * 6, 400000);
+  viewer.orbitVisionMarkInteraction?.();
   viewer.camera.flyToBoundingSphere(sphere, {
     duration: 1.6,
     offset: new Cesium.HeadingPitchRange(0, Cesium.Math.toRadians(-35), sphere.radius * 2.4),
+    complete: () => viewer.orbitVisionMarkInteraction?.(),
   });
 }
 
 export function flyToIndia(viewer) {
+  viewer.orbitVisionMarkInteraction?.();
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(78.9629, 20.5937, 6500000),
     duration: 1.4,
+    complete: () => viewer.orbitVisionMarkInteraction?.(),
+  });
+}
+
+// Hover-to-identify on the point cloud: cheap scene.pick under a throttle so
+// it stays smooth at full object count, wired to a caller-owned DOM tooltip
+// (project type/colour tokens live in style.css, not here).
+export function attachHoverTooltip(viewer, tooltipEl) {
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  const PICK_THROTTLE_MS = 40;
+  let lastPickMs = 0;
+
+  handler.setInputAction((movement) => {
+    const nowMs = performance.now();
+    if (nowMs - lastPickMs < PICK_THROTTLE_MS) return;
+    lastPickMs = nowMs;
+
+    const picked = viewer.scene.pick(movement.endPosition);
+    const info = picked?.id?.isFleetObject ? picked.id : null;
+    if (!info) {
+      tooltipEl.hidden = true;
+      return;
+    }
+
+    tooltipEl.hidden = false;
+    tooltipEl.style.left = `${movement.endPosition.x + 14}px`;
+    tooltipEl.style.top = `${movement.endPosition.y + 14}px`;
+
+    tooltipEl.textContent = '';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'globe-tooltip-name';
+    nameEl.textContent = info.name;
+    const metaEl = document.createElement('div');
+    metaEl.className = 'globe-tooltip-meta';
+    const bandEl = document.createElement('span');
+    bandEl.className = `globe-tooltip-band band-${info.band.toLowerCase()}`;
+    bandEl.textContent = info.band;
+    metaEl.appendChild(bandEl);
+    if (info.isIndian) {
+      const indiaEl = document.createElement('span');
+      indiaEl.className = 'globe-tooltip-india';
+      indiaEl.textContent = 'INDIA';
+      metaEl.appendChild(indiaEl);
+    }
+    tooltipEl.append(nameEl, metaEl);
+  }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+  viewer.scene.canvas.addEventListener('mouseleave', () => {
+    tooltipEl.hidden = true;
   });
 }

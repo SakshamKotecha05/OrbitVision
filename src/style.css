@@ -423,6 +423,70 @@ body.mode-india .mode-btn.is-active {
   margin: 0;
 }
 
+/* ---------- globe hover tooltip ---------- */
+
+.globe-tooltip {
+  position: absolute;
+  z-index: 12;
+  /* pointer-events stay off so the tooltip can never trap or block a click
+     on the canvas beneath it. */
+  pointer-events: none;
+  background: rgba(13, 18, 26, 0.82);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 7px 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.globe-tooltip[hidden] {
+  display: none;
+}
+
+.globe-tooltip-name {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.globe-tooltip-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.globe-tooltip-band {
+  color: var(--text-dim);
+}
+.globe-tooltip-band.band-critical {
+  color: var(--critical);
+}
+.globe-tooltip-band.band-high {
+  color: var(--high);
+}
+.globe-tooltip-band.band-moderate {
+  color: var(--moderate);
+}
+.globe-tooltip-band.band-low {
+  color: var(--low);
+}
+
+.globe-tooltip-india {
+  color: var(--saffron);
+  border: 1px solid var(--saffron-dim);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
 /* ---------- risk panel ---------- */
 
 .panel {
