@@ -7,6 +7,12 @@ It carries a dedicated, continuous screen for India's operational satellites.
 
 Built for Smart India Hackathon 2026, problem statement PS-04.
 
+## Documentation
+
+- [`docs/overview.md`](docs/overview.md) - the project explained in plain language, no orbital-mechanics or software background needed. Start here if you're presenting or reviewing OrbitVision without having read the code.
+- [`docs/architecture.md`](docs/architecture.md) - the full technical architecture: stack, engine pipeline, risk model, frontend structure, design system, and how to run everything. Start here if you're working on the code.
+- [`docs/output-contract.md`](docs/output-contract.md) - the frozen shape of `data/output.json`, the single contract between the engine and the frontend.
+
 ## Status
 
 Both halves are working: the engine (`src/orbitvision/`) and the frontend, wired together against `docs/output-contract.md`.
