@@ -5,6 +5,7 @@ import * as Cesium from 'cesium';
 import {
   createGlobe,
   buildObjectCloud,
+  buildOrbitRings,
   highlightConjunction,
   flyToConjunction,
   flyToIndia,
@@ -75,7 +76,7 @@ const state = {
   windowEndMs: 0,
   currentMs: 0,
   playing: false,
-  speedSecPerSec: 300,
+  speedSecPerSec: Number(el.speedSelect.value),
   highlight: null, // active highlightConjunction() handle
 };
 
@@ -124,6 +125,7 @@ async function main() {
     band: v.band,
   }));
   const cloud = buildObjectCloud(viewer, entries);
+  const rings = buildOrbitRings(viewer, entries);
   attachHoverTooltip(viewer, el.globeTooltip);
 
   function satrecOf(noradId) {
@@ -299,6 +301,7 @@ async function main() {
     const date = new Date(state.currentMs);
     viewer.clock.currentTime = Cesium.JulianDate.fromDate(date);
     cloud.update(date, visibleNoradIds());
+    rings.update(date, visibleNoradIds());
     if (state.highlight) state.highlight.update(date);
     el.scrubDate.textContent = fmtDayLabel(state.currentMs);
     el.scrubTime.textContent = fmtClockTime(state.currentMs);

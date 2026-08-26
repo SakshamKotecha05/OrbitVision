@@ -1,5 +1,5 @@
 import * as Cesium from 'cesium';
-import { positionEcefKm } from './propagate.js';
+import { positionEcefKm, positionEciKm, gmstAt } from './propagate.js';
 
 // Never touch Cesium ion: no token, no ion-backed imagery/terrain/geocoder.
 Cesium.Ion.defaultAccessToken = undefined;
@@ -156,6 +156,120 @@ export function buildObjectCloud(viewer, entries) {
   }
 
   return { collection, refs, update };
+}
+
+// Ambient shell colour: a single cool, very-low-alpha neutral rather than
+// band colour. Tinting 700+ rings by band read as coloured spaghetti
+// competing with the point cloud's own band colours; one quiet tone reads
+// as a shell on both the lit and night hemispheres and stays out of the way
+// of the highlighted conjunction's cyan/saffron tracks. The alpha is far
+// lower than a single ring would want - with 700+ overlapping near the
+// poles, anything above a few percent stacks into a bright haze. Tuned by
+// eye in-browser (0.16 -> 0.08 -> 0.045 -> 0.03) against the default,
+// selected-conjunction, and India Watch views; 0.03 was the first value
+// that read as a soft shell rather than a wireframe ball.
+const ORBIT_RING_COLOR = Cesium.Color.fromCssColorString('#8FB4D6').withAlpha(0.03);
+
+// Row-major ECI(TEME)->ECEF rotation for a single instant, built from the
+// same GMST angle positionEcefKm uses per-point. Verified against
+// satellite.js's own eciToEcf() output rather than assumed from convention.
+function eciToEcefMatrix4(gmst) {
+  const c = Math.cos(gmst);
+  const s = Math.sin(gmst);
+  return Cesium.Matrix4.fromRotationTranslation(new Cesium.Matrix3(c, s, 0, -s, c, 0, 0, 0, 1), Cesium.Cartesian3.ZERO);
+}
+
+// One period of an object's orbit sampled in the raw inertial (TEME) frame,
+// centered on the object's own element epoch for best SGP4 accuracy. These
+// points are never rotated to ECEF individually - the whole ring rotates as
+// one rigid body via the primitive's modelMatrix, so this only runs once
+// per object, not once per frame.
+function orbitRingEci(satrec, epochDate, periodMinutes, pointCount = 72) {
+  const points = [];
+  const spanMs = periodMinutes * 60 * 1000;
+  const startMs = epochDate.getTime() - spanMs / 2;
+  const stepMs = spanMs / (pointCount - 1);
+  for (let i = 0; i < pointCount; i++) {
+    const t = new Date(startMs + i * stepMs);
+    const pos = positionEciKm(satrec, t);
+    if (pos) points.push(toCartesian(pos));
+  }
+  return points;
+}
+
+function ringGeometryInstance(noradId, positions) {
+  return new Cesium.GeometryInstance({
+    geometry: new Cesium.PolylineGeometry({
+      positions,
+      width: 1,
+      vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT,
+      arcType: Cesium.ArcType.NONE,
+    }),
+    attributes: {
+      color: Cesium.ColorGeometryInstanceAttribute.fromColor(ORBIT_RING_COLOR),
+    },
+    id: { noradId },
+  });
+}
+
+// Ambient orbit shell: every tracked object's full ring, batched into one
+// Cesium.Primitive (a handful of GPU draw calls, geometry baked once) and
+// re-oriented each frame by writing its modelMatrix - a single czm_model
+// uniform, not a per-vertex rebuild. That's the part a PointPrimitiveCollection
+// or PolylineCollection can't give you: PolylineCollection's own modelMatrix
+// setter re-encodes every polyline's vertex buffer on every assignment
+// (measured ~20-40ms/frame for this object count, worse than not having
+// rings at all), which is why this reaches for the lower-level Primitive/
+// GeometryInstance API instead. See PR body for the before/after numbers.
+export function buildOrbitRings(viewer, entries) {
+  const rings = entries
+    .map((e) => ({
+      noradId: e.noradId,
+      positions: orbitRingEci(e.satrec, new Date(e.obj.orbit.epoch_utc), e.obj.orbit.period_minutes),
+    }))
+    .filter((r) => r.positions.length > 1);
+
+  function makePrimitive(list) {
+    if (list.length === 0) return null;
+    return viewer.scene.primitives.add(
+      new Cesium.Primitive({
+        geometryInstances: list.map((r) => ringGeometryInstance(r.noradId, r.positions)),
+        // Explicit depthTest: translucent geometry must still occlude behind
+        // the opaque globe (depthMask stays off so blending order among the
+        // rings themselves is undefined but harmless at this alpha) - without
+        // it every ring's far-side arc bleeds through the planet and the
+        // shell reads as a wireframe ball instead of orbits around a solid Earth.
+        appearance: new Cesium.PolylineColorAppearance({
+          translucent: true,
+          renderState: {
+            depthTest: { enabled: true },
+            depthMask: false,
+            blending: Cesium.BlendingState.ALPHA_BLEND,
+          },
+        }),
+        asynchronous: false,
+      }),
+    );
+  }
+
+  let primitive = makePrimitive(rings);
+  let lastFilterState = 'global';
+
+  function update(date, visibleNoradIds) {
+    const modelMatrix = eciToEcefMatrix4(gmstAt(date));
+    if (primitive) primitive.modelMatrix = modelMatrix;
+
+    const filterState = visibleNoradIds ? 'filtered' : 'global';
+    if (filterState === lastFilterState) return;
+    lastFilterState = filterState;
+
+    if (primitive) viewer.scene.primitives.remove(primitive);
+    const visible = visibleNoradIds ? rings.filter((r) => visibleNoradIds.has(r.noradId)) : rings;
+    primitive = makePrimitive(visible);
+    if (primitive) primitive.modelMatrix = modelMatrix;
+  }
+
+  return { update };
 }
 
 // Samples one full orbital period around the conjunction's TCA, converting
