@@ -702,9 +702,12 @@ body.mode-india .cardR.is-selected {
 
 /* Detail expands inline under its card, list rows above and below stay on
    screen (report section 5 - selection used to hide the whole list). */
+/* Horizontal padding matches .cardR's own (18px) exactly: .cardR-detail is
+   a sibling of the card button, not a child, so without this its content
+   sits flush with the <li>'s edge instead of the card's inset content. */
 .cardR-detail {
   margin-top: 14px;
-  padding-top: 14px;
+  padding: 14px 18px 0;
   border-top: 1px solid var(--border-soft);
   cursor: default;
 }
