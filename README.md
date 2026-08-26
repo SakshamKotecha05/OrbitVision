@@ -2,6 +2,10 @@
 
 Satellite conjunction risk dashboard.
 
+**Live demo:** [sakshamkotecha05.github.io/OrbitVision](https://sakshamkotecha05.github.io/OrbitVision/)
+No install needed, it runs entirely in your browser and rebuilds automatically on every push to `main`.
+Give the globe a second or two on first load to paint in its Earth imagery.
+
 ## Why this exists
 
 There are tens of thousands of tracked objects in orbit around Earth: working satellites, dead satellites, spent rocket stages, and debris from old collisions.
@@ -21,10 +25,11 @@ Built for Smart India Hackathon 2026, problem statement PS-04.
 - [`docs/overview.md`](docs/overview.md) - the project explained in plain language, no orbital-mechanics or software background needed. Start here if you're presenting or reviewing OrbitVision without having read the code.
 - [`docs/architecture.md`](docs/architecture.md) - the full technical architecture: stack, engine pipeline, risk model, frontend structure, design system, and how to run everything. Start here if you're working on the code.
 - [`docs/output-contract.md`](docs/output-contract.md) - the frozen shape of `data/output.json`, the single contract between the engine and the frontend.
+- [`docs/presentation-guide.md`](docs/presentation-guide.md) - deck skeleton, talking points, demo script, and figures to quote for the Smart India Hackathon 2026 presentation.
 
 ## Using the dashboard
 
-Open the dashboard and you land on Global Screen: a 3D globe with every tracked object moving along its orbit, and a ranked list of risky conjunctions on the right, worst first.
+Open the [live dashboard](https://sakshamkotecha05.github.io/OrbitVision/) and you land on Global Screen: a 3D globe with every tracked object moving along its orbit, and a ranked list of risky conjunctions on the right, worst first.
 
 Each row in the list is one encounter between two objects: which two, how close they pass, and a risk band.
 Click a row and three things happen at once: the globe flies to that encounter and draws both orbital paths, a detail panel opens with the full numbers behind the score, and the clock jumps to five minutes before closest approach so you can watch it happen.
