@@ -1,13 +1,59 @@
-import { fmtUtc, fmtDuration, fmtDayLabel } from './data.js';
+import { fmtIst, fmtDuration, fmtDayLabel, IST_OFFSET_MS } from './data.js';
 
-// Caption's TCA read: "in 1d 4h" / "4h ago", relative to the scrubbed time.
-function tcaCaption(c, currentTime) {
-  const secs = (new Date(c.tca_utc).getTime() - currentTime.getTime()) / 1000;
-  const dur = fmtDuration(secs).replace(/^[+-]/, '');
-  return secs >= 0 ? `TCA in ${dur}` : `TCA ${dur} ago`;
+// Pc as a percentage: three significant figures, capped at five leading
+// zeros. Captain's exact call (report section 4, rounds 2-3), verified in
+// the browser against all 541 records. Seven decimal places (not six) keeps
+// two significant figures in the deep tail instead of one, while still
+// satisfying "no more than five leading zeros" literally. chan_pc has no
+// lower bound, so the guard stays even though nothing in this dataset
+// reaches it - derived from PCT_MAX_DP so the two can't drift apart.
+const PCT_MAX_DP = 7;
+const PCT_GUARD = 0.5 * Math.pow(10, -PCT_MAX_DP);
+function fmtPct(pc) {
+  const v = pc * 100;
+  if (v < PCT_GUARD) return `< ${Math.pow(10, -PCT_MAX_DP).toFixed(PCT_MAX_DP)}%`;
+  const sig = Number(v.toPrecision(3));
+  const dp = Math.min(PCT_MAX_DP, Math.max(0, -Math.floor(Math.log10(sig)) + 2));
+  return `${sig.toFixed(dp)}%`;
 }
 
-export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, onSelect) {
+// Sub-kilometre misses in metres, so the top of the list stops reading as a
+// wall of identical "0.03"s (report section 2).
+function fmtMiss(km) {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(2)} km`;
+}
+
+// Full duration with minutes retained past a day ("1d 19h 42m"). Separate
+// from data.js:fmtDuration, which drops minutes above 24h for other callers.
+function fmtDurFull(seconds) {
+  const abs = Math.abs(seconds);
+  const d = Math.floor(abs / 86400);
+  const h = Math.floor((abs % 86400) / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const p = (n) => String(n).padStart(2, '0');
+  if (d > 0) return `${d}d ${h}h ${p(m)}m`;
+  if (h > 0) return `${h}h ${p(m)}m`;
+  return `${m}m`;
+}
+
+function urgency(c, currentTime) {
+  const h = (new Date(c.tca_utc).getTime() - currentTime.getTime()) / 3600000;
+  if (h < 0) return 'past';
+  if (h <= 6) return 'imminent';
+  if (h <= 24) return 'soon';
+  return '';
+}
+
+const ROW_ICON = {
+  miss: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5c3.2 0 6.6-2.4 9-8"/><path d="M8 3.2h3.4v3.4"/></svg>',
+  pc: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><text x="8" y="10.8" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="7.2" font-weight="600" fill="currentColor">Pc</text></svg>',
+  tca: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h11"/><path d="M9.4 4.4 13 8l-3.6 3.6"/></svg>',
+};
+
+// Captain's reference layout (report section 4b, amended by round-3
+// answers 1 and 4): band pill on its own line above the full-width pair
+// name, then MISS / PC / TCA as equal-weight labelled rows. No hero.
+export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, riskBands, onSelect) {
   countEl.textContent = conjunctions.length ? `${conjunctions.length} tracked` : '';
 
   listEl.innerHTML = '';
@@ -21,54 +67,81 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
 
   for (const c of conjunctions) {
     const li = document.createElement('li');
+    li.dataset.id = c.id;
+    const selected = c.id === selectedId;
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `cardR band-${c.risk_band}${c.id === selectedId ? ' is-selected' : ''}`;
-    btn.setAttribute('aria-pressed', String(c.id === selectedId));
+    btn.className = `cardR band-${c.risk_band}${selected ? ' is-selected' : ''}`;
+    btn.setAttribute('aria-pressed', String(selected));
+    btn.setAttribute('aria-expanded', String(selected));
 
-    const top = document.createElement('div');
-    top.className = 'cardR-top';
-    top.innerHTML = `
-      <span class="cardR-names">${c.primary.name} × ${c.secondary.name}</span>
-      <span class="cardR-top-right">${c.india_related ? '<span class="cardR-india-tag">INDIA</span>' : ''}<span class="cardR-band">${c.risk_band}</span></span>
+    const tcaSecs = (new Date(c.tca_utc).getTime() - currentTime.getTime()) / 1000;
+    btn.innerHTML = `
+      <span class="cardR-pill">${c.risk_band}</span>
+      <span class="cardR-names">${c.india_related ? '<i class="cardR-india-dot" aria-hidden="true"></i>' : ''}${c.primary.name} <span class="cardR-x">&times;</span> ${c.secondary.name}</span>
+      <div class="cardR-rows">
+        <div class="cardR-row">${ROW_ICON.miss}<span class="cardR-row-label">MISS</span><span class="cardR-row-value">${fmtMiss(c.miss_distance_km)}</span></div>
+        <div class="cardR-row">${ROW_ICON.pc}<span class="cardR-row-label">PC</span><span class="cardR-row-value">${fmtPct(c.max_collision_probability)}</span></div>
+        <div class="cardR-row cardR-row-tca ${urgency(c, currentTime)}">${ROW_ICON.tca}<span class="cardR-row-label">TCA</span><span class="cardR-row-value">${fmtDurFull(tcaSecs)}</span></div>
+      </div>
     `;
-    btn.appendChild(top);
-
-    const hero = document.createElement('div');
-    hero.className = 'cardR-hero';
-    hero.innerHTML = `${c.miss_distance_km.toFixed(2)}<span>km miss</span>`;
-    btn.appendChild(hero);
-
-    const caption = document.createElement('div');
-    caption.className = 'cardR-caption';
-    caption.innerHTML = `<i></i>Max Pc <b>${c.max_collision_probability.toExponential(1)}</b> &middot; ${tcaCaption(c, currentTime)}`;
-    btn.appendChild(caption);
-
     btn.addEventListener('click', () => onSelect(c.id));
     li.appendChild(btn);
+
+    if (selected) {
+      const detail = document.createElement('div');
+      detail.className = 'cardR-detail';
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'cardR-detail-close';
+      close.textContent = '↑ Close';
+      close.addEventListener('click', () => onSelect(c.id));
+      detail.appendChild(close);
+      const body = document.createElement('div');
+      body.className = 'cardR-detail-body';
+      renderDetail(body, c, riskBands);
+      detail.appendChild(body);
+      li.appendChild(detail);
+    }
+
     listEl.appendChild(li);
   }
 }
 
-// Mission-timeline ruler scaffolding: N-1 day gridlines and N+1 day labels
-// across the loaded window, computed once at load since the window is static.
+// IST midnights (as true UTC ms) falling inside (startMs, endMs].
+function istMidnightsInRange(startMs, endMs) {
+  const startIst = startMs + IST_OFFSET_MS;
+  const firstMidnightIst = Math.ceil(startIst / 86400000) * 86400000;
+  const midnights = [];
+  for (let m = firstMidnightIst; m - IST_OFFSET_MS < endMs; m += 86400000) {
+    midnights.push(m - IST_OFFSET_MS);
+  }
+  return midnights;
+}
+
+// Mission-timeline ruler: gridlines sit on IST midnights (not evenly spaced
+// day slices from window start), and each day label is positioned at the
+// start of the day it names, so labels and gridlines line up.
 export function renderRuler(gridlinesEl, labelsEl, startMs, endMs) {
-  const days = Math.max(1, Math.round((endMs - startMs) / 86400000));
+  const span = endMs - startMs;
+  const midnights = istMidnightsInRange(startMs, endMs);
 
   gridlinesEl.innerHTML = '';
-  for (let i = 1; i < days; i++) {
+  for (const ms of midnights) {
     const line = document.createElement('i');
     line.className = 'gridline';
-    line.style.left = `${(i / days) * 100}%`;
+    line.style.left = `${((ms - startMs) / span) * 100}%`;
     gridlinesEl.appendChild(line);
   }
 
   labelsEl.innerHTML = '';
-  for (let i = 0; i <= days; i++) {
-    const span = document.createElement('span');
-    span.textContent = fmtDayLabel(startMs + i * 86400000);
-    labelsEl.appendChild(span);
+  for (const ms of [startMs, ...midnights]) {
+    const span_ = document.createElement('span');
+    span_.className = 'ruler-label';
+    span_.textContent = fmtDayLabel(ms);
+    span_.style.left = `${((ms - startMs) / span) * 100}%`;
+    labelsEl.appendChild(span_);
   }
 }
 
@@ -125,7 +198,7 @@ export function renderDetail(bodyEl, c, riskBands) {
   const bandRow = document.createElement('div');
   bandRow.className = 'detail-band-row';
   bandRow.innerHTML = `<span class="risk-band-tag band-${c.risk_band}">${c.risk_band}</span>
-    <span class="detail-tca">TCA ${fmtUtc(c.tca_utc)}</span>`;
+    <span class="detail-tca">TCA ${fmtIst(c.tca_utc)}</span>`;
   bodyEl.appendChild(bandRow);
 
   const objects = document.createElement('div');
@@ -201,7 +274,7 @@ export function renderTicks(ticksEl, conjunctions, startMs, endMs, onJump) {
       'aria-label',
       `Jump to ${c.primary.name} / ${c.secondary.name} closest approach, ${c.risk_band} risk`,
     );
-    btn.title = `${c.primary.name} x ${c.secondary.name} - ${fmtUtc(c.tca_utc)}`;
+    btn.title = `${c.primary.name} x ${c.secondary.name} - ${fmtIst(c.tca_utc)}`;
     btn.addEventListener('click', () => onJump(c));
     ticksEl.appendChild(btn);
   }

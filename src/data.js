@@ -18,8 +18,12 @@ export function uniqueObjects(data) {
 
 export const RISK_ORDER = ['CRITICAL', 'HIGH', 'MODERATE', 'LOW'];
 
-export function fmtUtc(iso) {
-  const d = new Date(iso);
+// SIH is a domestic programme, so every absolute time on screen reads IST
+// (UTC+05:30, no DST) rather than the engine's UTC payload.
+export const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+export function fmtIst(iso) {
+  const d = new Date(new Date(iso).getTime() + IST_OFFSET_MS);
   return (
     d.toLocaleString('en-GB', {
       timeZone: 'UTC',
@@ -29,7 +33,7 @@ export function fmtUtc(iso) {
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-    }) + ' UTC'
+    }) + ' IST'
   );
 }
 
@@ -52,17 +56,17 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
 // Mission-timeline strip formatting: day label ("23 AUG"), bare clock time
 // ("17:41:16"), and a compact date+time for the window readout ("23 AUG 00:00").
 export function fmtDayLabel(ms) {
-  const d = new Date(ms);
+  const d = new Date(ms + IST_OFFSET_MS);
   return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]}`;
 }
 
 export function fmtClockTime(ms) {
-  const d = new Date(ms);
+  const d = new Date(ms + IST_OFFSET_MS);
   return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
 }
 
-export function fmtCompactUtc(ms) {
-  const d = new Date(ms);
+export function fmtCompactIst(ms) {
+  const d = new Date(ms + IST_OFFSET_MS);
   const hm = [d.getUTCHours(), d.getUTCMinutes()].map((n) => String(n).padStart(2, '0')).join(':');
   return `${fmtDayLabel(ms)} ${hm}`;
 }
