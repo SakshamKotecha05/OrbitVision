@@ -44,15 +44,11 @@ function urgency(c, currentTime) {
   return '';
 }
 
-const ROW_ICON = {
-  miss: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5c3.2 0 6.6-2.4 9-8"/><path d="M8 3.2h3.4v3.4"/></svg>',
-  pc: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.3"/><text x="8" y="10.8" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="7.2" font-weight="600" fill="currentColor">Pc</text></svg>',
-  tca: '<svg class="cardR-row-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h11"/><path d="M9.4 4.4 13 8l-3.6 3.6"/></svg>',
-};
-
 // Captain's reference layout (report section 4b, amended by round-3
-// answers 1 and 4): band pill on its own line above the full-width pair
-// name, then MISS / PC / TCA as equal-weight labelled rows. No hero.
+// answers 1 and 4, tightened again in round 4): band pill on its own line
+// above the full-width pair name, then MISS / PC / TCA collapsed onto one
+// line (no hero, no row icons - the icons only earned their space anchoring
+// a three-row list that no longer exists).
 export function renderRiskList(listEl, countEl, conjunctions, selectedId, currentTime, riskBands, onSelect) {
   countEl.textContent = conjunctions.length ? `${conjunctions.length} tracked` : '';
 
@@ -80,10 +76,12 @@ export function renderRiskList(listEl, countEl, conjunctions, selectedId, curren
     btn.innerHTML = `
       <span class="cardR-pill">${c.risk_band}</span>
       <span class="cardR-names">${c.india_related ? '<i class="cardR-india-dot" aria-hidden="true"></i>' : ''}${c.primary.name} <span class="cardR-x">&times;</span> ${c.secondary.name}</span>
-      <div class="cardR-rows">
-        <div class="cardR-row">${ROW_ICON.miss}<span class="cardR-row-label">MISS</span><span class="cardR-row-value">${fmtMiss(c.miss_distance_km)}</span></div>
-        <div class="cardR-row">${ROW_ICON.pc}<span class="cardR-row-label">PC</span><span class="cardR-row-value">${fmtPct(c.max_collision_probability)}</span></div>
-        <div class="cardR-row cardR-row-tca ${urgency(c, currentTime)}">${ROW_ICON.tca}<span class="cardR-row-label">TCA</span><span class="cardR-row-value">${fmtDurFull(tcaSecs)}</span></div>
+      <div class="cardR-metrics">
+        <span class="cardR-metric"><span class="cardR-metric-label">MISS</span><span class="cardR-metric-value">${fmtMiss(c.miss_distance_km)}</span></span>
+        <span class="cardR-metric-sep" aria-hidden="true"></span>
+        <span class="cardR-metric"><span class="cardR-metric-label">PC</span><span class="cardR-metric-value">${fmtPct(c.max_collision_probability)}</span></span>
+        <span class="cardR-metric-sep" aria-hidden="true"></span>
+        <span class="cardR-metric cardR-metric-tca ${urgency(c, currentTime)}"><span class="cardR-metric-label">TCA</span><span class="cardR-metric-value">${fmtDurFull(tcaSecs)}</span></span>
       </div>
     `;
     btn.addEventListener('click', () => onSelect(c.id));
