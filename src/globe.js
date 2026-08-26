@@ -1,5 +1,5 @@
 import * as Cesium from 'cesium';
-import { positionEcefKm, positionEciKm, gmstAt } from './propagate.js';
+import { positionEcefKm } from './propagate.js';
 
 // Never touch Cesium ion: no token, no ion-backed imagery/terrain/geocoder.
 Cesium.Ion.defaultAccessToken = undefined;
@@ -158,46 +158,45 @@ export function buildObjectCloud(viewer, entries) {
   return { collection, refs, update };
 }
 
-// Ambient shell colour: a single cool, very-low-alpha neutral rather than
-// band colour. Tinting 700+ rings by band read as coloured spaghetti
-// competing with the point cloud's own band colours; one quiet tone reads
-// as a shell on both the lit and night hemispheres and stays out of the way
-// of the highlighted conjunction's cyan/saffron tracks. The alpha is far
-// lower than a single ring would want - with 700+ overlapping near the
-// poles, anything above a few percent stacks into a bright haze. Tuned by
-// eye in-browser (0.16 -> 0.08 -> 0.045 -> 0.03) against the default,
-// selected-conjunction, and India Watch views; 0.03 was the first value
-// that read as a soft shell rather than a wireframe ball.
-const ORBIT_RING_COLOR = Cesium.Color.fromCssColorString('#8FB4D6').withAlpha(0.03);
+// A closed ring per object read as a wireframe ball, not a shell: 700+ full
+// loops always cross the visible disc from every angle no matter how faint
+// each one is, because it's the LINE COUNT that fills the frame, not the
+// opacity. A short trailing arc behind each object - a slice of its orbit,
+// not the whole thing - draws a small fraction of the geometry per object,
+// leaves most of the planet visible, and reads as motion rather than mesh.
+// LEO orbital speed (~7-8 km/s) means even a "short" fraction of a period is
+// a long chord: 12% of a ~93 min period is already ~670s of flight, ~5000km
+// travelled - close to Earth's radius, and visually a streak spanning most
+// of the disc, not a trail. Tuned down by eye in-browser against the
+// default, daylit, and India Watch views until objects read as points with
+// a short motion trail rather than a web of long chords.
+const ORBIT_TAIL_FRACTION = 0.025; // ~2.5% of one period, per-object
+const ORBIT_TAIL_POINTS = 6;
+// Real wall-clock throttle (not simulated time): every tail is recomputed
+// directly in ECEF, like groundTrack, which costs real SGP4 propagation -
+// cheap once, too much for 700+ objects every animation frame. Rebuilding
+// a few times a second keeps the sweep smooth without paying that cost at
+// 60fps; the point cloud still updates every frame regardless.
+const ORBIT_TAIL_REBUILD_MS = 300;
+const ORBIT_TAIL_COLOR = Cesium.Color.fromCssColorString('#8FB4D6').withAlpha(0.5);
 
-// Row-major ECI(TEME)->ECEF rotation for a single instant, built from the
-// same GMST angle positionEcefKm uses per-point. Verified against
-// satellite.js's own eciToEcf() output rather than assumed from convention.
-function eciToEcefMatrix4(gmst) {
-  const c = Math.cos(gmst);
-  const s = Math.sin(gmst);
-  return Cesium.Matrix4.fromRotationTranslation(new Cesium.Matrix3(c, s, 0, -s, c, 0, 0, 0, 1), Cesium.Cartesian3.ZERO);
-}
-
-// One period of an object's orbit sampled in the raw inertial (TEME) frame,
-// centered on the object's own element epoch for best SGP4 accuracy. These
-// points are never rotated to ECEF individually - the whole ring rotates as
-// one rigid body via the primitive's modelMatrix, so this only runs once
-// per object, not once per frame.
-function orbitRingEci(satrec, epochDate, periodMinutes, pointCount = 72) {
+// The ORBIT_TAIL_FRACTION of an object's period immediately behind `date`,
+// sampled directly in ECEF the same way groundTrack is (each point using
+// its own GMST) - correct, and cheap here because the arc only spans a few
+// percent of a rotation rather than a whole one.
+function orbitTailEcef(satrec, date, periodMinutes, pointCount = ORBIT_TAIL_POINTS) {
   const points = [];
-  const spanMs = periodMinutes * 60 * 1000;
-  const startMs = epochDate.getTime() - spanMs / 2;
+  const spanMs = periodMinutes * 60 * 1000 * ORBIT_TAIL_FRACTION;
   const stepMs = spanMs / (pointCount - 1);
   for (let i = 0; i < pointCount; i++) {
-    const t = new Date(startMs + i * stepMs);
-    const pos = positionEciKm(satrec, t);
+    const t = new Date(date.getTime() - spanMs + i * stepMs);
+    const pos = positionEcefKm(satrec, t);
     if (pos) points.push(toCartesian(pos));
   }
   return points;
 }
 
-function ringGeometryInstance(noradId, positions) {
+function tailGeometryInstance(noradId, positions) {
   return new Cesium.GeometryInstance({
     geometry: new Cesium.PolylineGeometry({
       positions,
@@ -206,67 +205,58 @@ function ringGeometryInstance(noradId, positions) {
       arcType: Cesium.ArcType.NONE,
     }),
     attributes: {
-      color: Cesium.ColorGeometryInstanceAttribute.fromColor(ORBIT_RING_COLOR),
+      color: Cesium.ColorGeometryInstanceAttribute.fromColor(ORBIT_TAIL_COLOR),
     },
     id: { noradId },
   });
 }
 
-// Ambient orbit shell: every tracked object's full ring, batched into one
-// Cesium.Primitive (a handful of GPU draw calls, geometry baked once) and
-// re-oriented each frame by writing its modelMatrix - a single czm_model
-// uniform, not a per-vertex rebuild. That's the part a PointPrimitiveCollection
-// or PolylineCollection can't give you: PolylineCollection's own modelMatrix
-// setter re-encodes every polyline's vertex buffer on every assignment
-// (measured ~20-40ms/frame for this object count, worse than not having
-// rings at all), which is why this reaches for the lower-level Primitive/
-// GeometryInstance API instead. See PR body for the before/after numbers.
+// Ambient orbit trails: a short recent arc behind every tracked object,
+// batched into one Cesium.Primitive and periodically rebuilt (not every
+// frame - see ORBIT_TAIL_REBUILD_MS) as the simulated clock advances.
 export function buildOrbitRings(viewer, entries) {
-  const rings = entries
-    .map((e) => ({
-      noradId: e.noradId,
-      positions: orbitRingEci(e.satrec, new Date(e.obj.orbit.epoch_utc), e.obj.orbit.period_minutes),
-    }))
-    .filter((r) => r.positions.length > 1);
-
-  function makePrimitive(list) {
-    if (list.length === 0) return null;
-    return viewer.scene.primitives.add(
-      new Cesium.Primitive({
-        geometryInstances: list.map((r) => ringGeometryInstance(r.noradId, r.positions)),
-        // Explicit depthTest: translucent geometry must still occlude behind
-        // the opaque globe (depthMask stays off so blending order among the
-        // rings themselves is undefined but harmless at this alpha) - without
-        // it every ring's far-side arc bleeds through the planet and the
-        // shell reads as a wireframe ball instead of orbits around a solid Earth.
-        appearance: new Cesium.PolylineColorAppearance({
-          translucent: true,
-          renderState: {
-            depthTest: { enabled: true },
-            depthMask: false,
-            blending: Cesium.BlendingState.ALPHA_BLEND,
-          },
-        }),
-        asynchronous: false,
-      }),
-    );
-  }
-
-  let primitive = makePrimitive(rings);
+  let primitive = null;
+  let lastRebuildMs = -Infinity;
   let lastFilterState = 'global';
 
-  function update(date, visibleNoradIds) {
-    const modelMatrix = eciToEcefMatrix4(gmstAt(date));
-    if (primitive) primitive.modelMatrix = modelMatrix;
-
-    const filterState = visibleNoradIds ? 'filtered' : 'global';
-    if (filterState === lastFilterState) return;
-    lastFilterState = filterState;
+  function rebuild(date, visibleNoradIds) {
+    const visible = visibleNoradIds ? entries.filter((e) => visibleNoradIds.has(e.noradId)) : entries;
+    const instances = [];
+    for (const e of visible) {
+      const positions = orbitTailEcef(e.satrec, date, e.obj.orbit.period_minutes);
+      if (positions.length > 1) instances.push(tailGeometryInstance(e.noradId, positions));
+    }
 
     if (primitive) viewer.scene.primitives.remove(primitive);
-    const visible = visibleNoradIds ? rings.filter((r) => visibleNoradIds.has(r.noradId)) : rings;
-    primitive = makePrimitive(visible);
-    if (primitive) primitive.modelMatrix = modelMatrix;
+    primitive = instances.length
+      ? viewer.scene.primitives.add(
+          new Cesium.Primitive({
+            geometryInstances: instances,
+            // Explicit depthTest: translucent geometry must still occlude
+            // behind the opaque globe, or far-side arcs bleed through the
+            // planet and the shell reads as a wireframe ball instead of
+            // orbits around a solid Earth.
+            appearance: new Cesium.PolylineColorAppearance({
+              translucent: true,
+              renderState: {
+                depthTest: { enabled: true },
+                depthMask: false,
+                blending: Cesium.BlendingState.ALPHA_BLEND,
+              },
+            }),
+            asynchronous: false,
+          }),
+        )
+      : null;
+  }
+
+  function update(date, visibleNoradIds) {
+    const filterState = visibleNoradIds ? 'filtered' : 'global';
+    const nowMs = performance.now();
+    if (primitive && filterState === lastFilterState && nowMs - lastRebuildMs < ORBIT_TAIL_REBUILD_MS) return;
+    lastRebuildMs = nowMs;
+    lastFilterState = filterState;
+    rebuild(date, visibleNoradIds);
   }
 
   return { update };

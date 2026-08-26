@@ -36,20 +36,3 @@ export function positionEcefKm(satrec, date) {
   const ecef = eciToEcf(result.position, gmst);
   return [ecef.x, ecef.y, ecef.z];
 }
-
-// Raw TEME/ECI km position at `date`, unrotated - the orbit's shape in the
-// inertial frame satellite.js already screens in. Used for the ambient orbit
-// rings, which rotate the whole inertial ellipse into ECEF as one rigid body
-// per frame instead of re-propagating every ring point every frame.
-export function positionEciKm(satrec, date) {
-  const result = propagate(satrec, date);
-  if (!result || !result.position) return null;
-  return [result.position.x, result.position.y, result.position.z];
-}
-
-// GMST (radians) at `date` - the same angle positionEcefKm uses internally,
-// exposed so callers can build their own ECI->ECEF rotation (e.g. as a
-// Cesium modelMatrix applied to a whole batch of already-ECI geometry).
-export function gmstAt(date) {
-  return gstime(date);
-}
