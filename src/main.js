@@ -75,7 +75,7 @@ const state = {
   windowEndMs: 0,
   currentMs: 0,
   playing: false,
-  speedSecPerSec: 300,
+  speedSecPerSec: Number(el.speedSelect.value),
   highlight: null, // active highlightConjunction() handle
 };
 
