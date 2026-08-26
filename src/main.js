@@ -1,5 +1,5 @@
 import './style.css';
-import { loadData, uniqueObjects, fmtClockTime, fmtDayLabel, fmtCompactUtc } from './data.js';
+import { loadData, uniqueObjects, fmtClockTime, fmtDayLabel, fmtCompactIst } from './data.js';
 import { buildSatrec } from './propagate.js';
 import * as Cesium from 'cesium';
 import {
@@ -10,7 +10,7 @@ import {
   flyToIndia,
   attachHoverTooltip,
 } from './globe.js';
-import { renderRiskList, renderDetail, renderTicks, renderLegend, renderRuler } from './ui.js';
+import { renderRiskList, renderTicks, renderLegend, renderRuler } from './ui.js';
 
 // Prefer the real pipeline output when it exists; fall back to the
 // fabricated sample so the demo still runs before the engine has produced
@@ -20,7 +20,11 @@ async function resolveDataUrl() {
   if (explicit) return explicit;
   try {
     const res = await fetch('data/output.json', { method: 'HEAD' });
-    if (res.ok) return 'data/output.json';
+    // Vite's dev server answers a HEAD for a missing path with its SPA
+    // fallback (index.html, status 200), not a 404 - res.ok alone can't
+    // tell the real file apart from that fallback. The fallback's
+    // content-type is text/html; the real file's is application/json.
+    if (res.ok && (res.headers.get('content-type') ?? '').includes('json')) return 'data/output.json';
   } catch {
     // network error probing for the real file: fall through to the sample
   }
@@ -37,10 +41,6 @@ const el = {
   panelHeading: document.getElementById('panel-heading'),
   panelCount: document.getElementById('panel-count'),
   riskRows: document.getElementById('risk-rows'),
-  panelList: document.getElementById('panel-list'),
-  panelDetail: document.getElementById('panel-detail'),
-  detailBack: document.getElementById('detail-back'),
-  detailBody: document.getElementById('detail-body'),
   indiaBanner: document.getElementById('india-banner'),
   indiaBannerCopy: document.getElementById('india-banner-copy'),
   legendRulerBar: document.getElementById('legend-ruler-bar'),
@@ -107,7 +107,7 @@ async function main() {
   el.metaWindow.textContent = `${data.screening.window_hours}h`;
   el.metaScreened.textContent = `${data.screening.objects_screened} obj`;
   el.scrubWindowHours.textContent = `${data.screening.window_hours}H WINDOW`;
-  el.scrubWindowSpan.textContent = `${fmtCompactUtc(state.windowStartMs)} → ${fmtCompactUtc(state.windowEndMs)} UTC`;
+  el.scrubWindowSpan.textContent = `${fmtCompactIst(state.windowStartMs)} → ${fmtCompactIst(state.windowEndMs)} IST`;
   renderRuler(el.scrubGridlines, el.rulerLabels, state.windowStartMs, state.windowEndMs);
 
   el.uncertaintyNote.innerHTML = `<strong>Uncertainty is modelled, not measured.</strong> ${data.uncertainty_model.summary}`;
@@ -144,6 +144,9 @@ async function main() {
     return ids;
   }
 
+  // Selecting a conjunction highlights it on the globe and re-renders the
+  // list with that card's detail expanded inline - the list itself never
+  // leaves the screen (report section 5: it used to be hidden outright).
   function selectConjunction(id, { fly = true } = {}) {
     state.selectedId = id;
     if (state.highlight) {
@@ -156,9 +159,16 @@ async function main() {
     state.highlight = highlightConjunction(viewer, c, satrecOf);
     if (fly) flyToConjunction(viewer, c, satrecOf);
 
-    el.panelList.hidden = true;
-    el.panelDetail.hidden = false;
-    renderDetail(el.detailBody, c, state.data.risk_bands);
+    renderList(id);
+  }
+
+  function deselect(id) {
+    state.selectedId = null;
+    if (state.highlight) {
+      state.highlight.remove();
+      state.highlight = null;
+    }
+    renderList(id);
   }
 
   // Risk-row click: jump the clock to T-5min before TCA (clamped to the
@@ -174,10 +184,13 @@ async function main() {
     syncSliderFromTime();
     tickVisuals();
     if (clamped !== target) {
-      const badge = document.createElement('div');
-      badge.className = 'detail-tca-badge';
-      badge.textContent = `TCA outside the loaded ${state.data.screening.window_hours}h window — showing nearest available time.`;
-      el.detailBody.prepend(badge);
+      const body = el.riskRows.querySelector(`li[data-id="${c.id}"] .cardR-detail-body`);
+      if (body) {
+        const badge = document.createElement('div');
+        badge.className = 'detail-tca-badge';
+        badge.textContent = `TCA outside the loaded ${state.data.screening.window_hours}h window — showing nearest available time.`;
+        body.prepend(badge);
+      }
     }
     flashDestination(c.id);
   }
@@ -190,20 +203,16 @@ async function main() {
     }
   }
 
-  function backToList() {
-    state.selectedId = null;
-    if (state.highlight) {
-      state.highlight.remove();
-      state.highlight = null;
-    }
-    el.panelDetail.hidden = true;
-    el.panelList.hidden = false;
-    renderList();
-  }
-
-  function renderList() {
+  // renderList() replaces every card's DOM node, which would otherwise drop
+  // keyboard focus to <body> on each select/deselect; focusId restores it
+  // to the card that triggered the re-render.
+  function renderList(focusId) {
     const list = activeConjunctions();
-    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), (id) => {
+    renderRiskList(el.riskRows, el.panelCount, list, state.selectedId, new Date(state.currentMs), state.data.risk_bands, (id) => {
+      if (id === state.selectedId) {
+        deselect(id);
+        return;
+      }
       const c = list.find((x) => x.id === id) ?? state.data.conjunctions.find((x) => x.id === id);
       if (c) jumpToTca(c);
     });
@@ -214,6 +223,9 @@ async function main() {
       selectConjunction(c.id);
       syncSliderFromTime();
     });
+    if (focusId != null) {
+      el.riskRows.querySelector(`li[data-id="${focusId}"] .cardR`)?.focus();
+    }
   }
 
   function setMode(mode) {
@@ -235,14 +247,15 @@ async function main() {
     }
 
     state.selectedId = null;
-    el.panelDetail.hidden = true;
-    el.panelList.hidden = false;
+    if (state.highlight) {
+      state.highlight.remove();
+      state.highlight = null;
+    }
     renderList();
   }
 
   el.modeGlobal.addEventListener('click', () => setMode('global'));
   el.modeIndia.addEventListener('click', () => setMode('india'));
-  el.detailBack.addEventListener('click', backToList);
 
   el.uncertaintyToggle.addEventListener('click', () => {
     const open = el.uncertaintyNote.hidden;
