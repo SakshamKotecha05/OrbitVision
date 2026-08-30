@@ -18,7 +18,6 @@ OrbitVision is a prototype built to answer that question.
 It reads a public catalogue of tracked objects, predicts where each one will be over the next three days, finds the pairs that come dangerously close, and scores how dangerous each encounter is: not by how close the two objects pass, but by the probability that they actually collide.
 It carries a dedicated, continuous screen for India's operational satellites.
 
-Built for Smart India Hackathon 2026, problem statement PS-04.
 
 ## Documentation
 
