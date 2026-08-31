@@ -1,106 +1,133 @@
 # OrbitVision
 
-Satellite conjunction risk dashboard.
+> A decision-support prototype for prioritising satellite conjunction risk in low Earth orbit.
 
-**Live demo:** [sakshamkotecha05.github.io/OrbitVision](https://sakshamkotecha05.github.io/OrbitVision/)
-No install needed, it runs entirely in your browser and rebuilds automatically on every push to `main`.
-Give the globe a second or two on first load to paint in its Earth imagery.
+[Live dashboard](https://sakshamkotecha05.github.io/OrbitVision/)
 
-## Why this exists
+![OrbitVision dashboard showing a 3D Earth, tracked orbital objects, ranked conjunction risks, and the 72-hour time scrub.](readme-assets/orbitvision-dashboard.png)
 
-There are tens of thousands of tracked objects in orbit around Earth: working satellites, dead satellites, spent rocket stages, and debris from old collisions.
-All of them are moving at several kilometres per second, fast enough that a graze destroys both objects involved and sprays out a cloud of new debris that threatens everything else nearby.
+OrbitVision turns a public satellite catalogue into a ranked view of possible close approaches over the next 72 hours.
+Instead of treating the closest pass as the highest risk, it ranks encounters by their maximum probability of collision, accounting for modelled uncertainty in the underlying orbital data.
+The result is an interactive globe, a risk-ranked encounter list, and a dedicated India Watch screen for Indian-operated low Earth orbit satellites.
 
-A satellite operator can move a satellite out of the way of an oncoming object, but only if they know the danger is coming, and only by spending fuel, a resource no satellite can restock in orbit.
-The real question an operator faces is which of the many daily close passes are actually worth spending that fuel on.
+## Why it matters
 
-OrbitVision is a prototype built to answer that question.
-It reads a public catalogue of tracked objects, predicts where each one will be over the next three days, finds the pairs that come dangerously close, and scores how dangerous each encounter is: not by how close the two objects pass, but by the probability that they actually collide.
-It carries a dedicated, continuous screen for India's operational satellites.
+Low Earth orbit contains working spacecraft, defunct satellites, rocket bodies, and debris, all travelling at orbital speeds.
+A collision can destroy both objects and create a debris cloud that raises the risk for other missions.
+Operators have limited opportunities and limited fuel to avoid an encounter, so they need to know which events are worth attention.
 
+OrbitVision is designed to make that decision easier to inspect.
 
-## Documentation
+## What you can explore
 
-- [`docs/overview.md`](docs/overview.md) - the project explained in plain language, no orbital-mechanics or software background needed. Start here if you're presenting or reviewing OrbitVision without having read the code.
-- [`docs/architecture.md`](docs/architecture.md) - the full technical architecture: stack, engine pipeline, risk model, frontend structure, design system, and how to run everything. Start here if you're working on the code.
-- [`docs/output-contract.md`](docs/output-contract.md) - the frozen shape of `data/output.json`, the single contract between the engine and the frontend.
-- [`docs/presentation-guide.md`](docs/presentation-guide.md) - deck skeleton, talking points, demo script, and figures to quote for the Smart India Hackathon 2026 presentation.
+- **Global Screen** shows a 3D view of the low Earth orbit catalogue alongside conjunctions ranked worst first.
+- **Risk cards** show the two objects, miss distance, maximum collision probability, and time of closest approach.
+- **Encounter selection** flies the globe to the event, highlights the relevant orbital paths, and moves the clock to just before closest approach.
+- **Time scrub** animates the catalogue through the complete 72-hour prediction window.
+- **India Watch** exhaustively screens Indian-operated low Earth orbit satellites against the full catalogue rather than filtering the global results afterward.
+- **Probability-based bands** distinguish Critical, High, Moderate, and Low risk using maximum collision probability rather than a simple distance cutoff.
 
-## Using the dashboard
+## How it works
 
-Open the [live dashboard](https://sakshamkotecha05.github.io/OrbitVision/) and you land on Global Screen: a 3D globe with every tracked object moving along its orbit, and a ranked list of risky conjunctions on the right, worst first.
+| Stage | What OrbitVision does |
+| --- | --- |
+| 1. Ingest | Reads CelesTrak GP element sets and SATCAT metadata from the committed offline snapshot or a rate-limited live cache. |
+| 2. Propagate | Uses SGP4 to predict low Earth orbit positions across a 72-hour window. |
+| 3. Screen | Narrows a large catalogue through analytic, coarse spatial, and fine closest-approach checks. |
+| 4. Score | Calculates Chan-method collision probability using modelled position uncertainty and hard-body radius. |
+| 5. Prioritise | Collapses repeat encounters per object pair and ranks the worst event for each pair. |
+| 6. Visualise | Writes a single JSON output that the Cesium-powered frontend renders as an interactive mission console. |
 
-Each row in the list is one encounter between two objects: which two, how close they pass, and a risk band.
-Click a row and three things happen at once: the globe flies to that encounter and draws both orbital paths, a detail panel opens with the full numbers behind the score, and the clock jumps to five minutes before closest approach so you can watch it happen.
-
-The **time scrub** along the bottom is a slider across the whole prediction window (72 hours by default).
-Drag it, or press play, and every object on the globe moves to its position at that moment.
-Marks along the scrub bar show when each listed encounter occurs, taller for the more dangerous ones.
-
-**India Watch**, the second tab at the top, narrows the list to only the encounters involving an Indian-operated satellite.
-Those satellites are screened against the entire catalogue with no shortcuts taken, so this isn't just the general list filtered down; it's an independent, exhaustive check.
-
-Every encounter is rated CRITICAL, HIGH, MODERATE, or LOW, based on its maximum probability of collision, never on how close the two objects pass.
-Two objects with old, uncertain tracking data can be a bigger risk at 400 metres apart than two objects with fresh data at 300 metres.
-The legend in the bottom-left corner shows the probability thresholds behind each band.
-See [`docs/overview.md`](docs/overview.md) for why probability is the right way to rank these encounters, and why some near-misses are deliberately left off the list entirely.
-
-## Status
-
-Both halves are working: the engine (`src/orbitvision/`) and the frontend, wired together against `docs/output-contract.md`.
-See that file for the schema the pipeline writes and the frontend renders.
-
-## Engine
-
-`src/orbitvision/` ingests cached CelesTrak GP/SATCAT data, propagates the LEO catalogue with SGP4, screens for close approaches, and scores each one, writing `data/output.json`.
-The CelesTrak snapshot is committed under `data/celestrak/` so the pipeline runs fully offline from a clean clone; do not re-fetch it outside its own two-hour cache window, since CelesTrak rate-limits repeat requests.
-
-Install dependencies once:
-
+```text
+CelesTrak catalogue → SGP4 propagation → three-stage screening → Chan Pc scoring
+                                                                    ↓
+                                                          data/output.json
+                                                                    ↓
+                                                   Cesium globe + ranked console
 ```
+
+## Important scope and limitations
+
+OrbitVision is a hackathon decision-support prototype, not an operational collision-warning service.
+
+- It uses public CelesTrak data, not operator-grade tracking data.
+- Position uncertainty is modelled from element-set age because public GP/TLE data does not include measured covariance.
+- It covers low Earth orbit only, with objects above roughly 2,000 km apogee excluded.
+- It does not send alerts, recommend manoeuvres, or connect to satellite-operator systems.
+- Formation-flying encounters with too little relative motion for the collision model are screened out before scoring.
+
+## Run locally
+
+### Prerequisites
+
+- Python 3.12 or a compatible Python 3 environment.
+- Node.js 20 or later.
+
+### 1. Install dependencies
+
+```bash
 pip install -r requirements.txt
-```
-
-Generate the real output file:
-
-```
-PYTHONPATH=src python -m orbitvision --offline --out data/output.json
-```
-
-See [`docs/architecture.md`](docs/architecture.md) for the full dependency list, the pipeline stage by stage, and the risk model behind the scores.
-
-## Frontend
-
-The frontend is a static Vite app: a CesiumJS globe, a ranked risk list, a time-scrub control, and a dedicated India view.
-It has no server component and no network dependency at runtime; CesiumJS is configured with bundled offline imagery only (no Cesium ion token, no CDN assets).
-
-Install dependencies once:
-
-```
 npm install
 ```
 
-Run the dev server:
+### 2. Generate the orbital-risk data
 
+Use the committed catalogue snapshot for repeatable local work.
+This mode makes no network calls.
+
+```bash
+PYTHONPATH=src python -m orbitvision --offline --out data/output.json
 ```
+
+The full offline run takes about five minutes against the committed snapshot.
+Run it before starting Vite or creating a production bundle.
+The committed `data/sample-output.json` documents the expected schema, but Vite copies `public/data` during a build and requires the generated output file to exist.
+
+### 3. Start the dashboard
+
+```bash
 npm run dev
 ```
 
-Build and preview the production bundle:
+Open the local URL printed by Vite, normally `http://localhost:5173/`.
 
-```
+### Production build
+
+```bash
 npm run build
 npm run preview
 ```
 
-### Which data file it loads
+## Verify the engine
 
-The app loads `data/output.json` (served from `public/data/`, which is a symlink to the top-level `data/` directory) when that file exists, and falls back to the fabricated `data/sample-output.json` when it does not, so the demo still runs before the engine has been run.
-Generate the real file with the command in [Engine](#engine) above.
-To point it at a different file matching the same output contract, pass it as a `data` query parameter:
-
-```
-http://localhost:5173/?data=/path/to/other-output.json
+```bash
+PYTHONPATH=src python tests/test_risk.py
 ```
 
-The path must be reachable over HTTP from the dev/preview server, so either drop the file under `public/` or serve it separately and pass its full URL.
+The tests cover the Chan probability calculation, maximum-Pc ranking, risk-band thresholds, formation-flying screening, and the initial orbital filter.
+
+## Data and risk model
+
+- **Catalogue:** [CelesTrak](https://celestrak.org/) GP element sets and SATCAT metadata.
+- **Propagation:** SGP4.
+- **Probability of collision:** Chan's method on the Foster formulation.
+- **Risk ranking:** maximum collision probability, not nominal probability or miss distance alone.
+- **Uncertainty:** an explicit age-based model, disclosed in the interface and output data as modelled rather than measured.
+
+The engine exports a single `data/output.json` file that the frontend consumes.
+
+## Deployment
+
+GitHub Actions builds the Python data output, bundles the Vite frontend, and deploys GitHub Pages whenever changes are merged into `main`.
+The deployed project is available at [sakshamkotecha05.github.io/OrbitVision](https://sakshamkotecha05.github.io/OrbitVision/).
+
+## Project structure
+
+```text
+src/orbitvision/  Python risk-analysis pipeline
+src/              Cesium dashboard and client-side propagation
+data/             Catalogue snapshot and generated risk output
+public/           Static imagery and browser-served data
+readme-assets/    Dashboard screenshot used in this README
+.github/          Test and GitHub Pages workflows
+```
